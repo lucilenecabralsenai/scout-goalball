@@ -83,13 +83,26 @@
  </head>
  <body class="h-full bg-slate-100 overflow-auto">
   <div id="app" class="h-full w-full flex flex-col"><!-- Header -->
-   <header class="bg-gradient-to-r from-blue-900 to-blue-700 text-white px-4 py-3 flex-shrink-0">
-    <div class="flex items-center justify-between">
-     <h1 id="app-title" class="text-xl font-bold tracking-tight">⚽ Scout Goalball Pro</h1>
-     <div class="flex items-center gap-2"><span id="current-phase" class="text-sm bg-blue-800 px-3 py-1 rounded-full">1º Tempo</span> <span id="match-score" class="text-lg font-bold">0 - 0</span>
-     </div>
-    </div>
-   </header><!-- Navigation -->
+   
+<header class="bg-blue-800 text-white py-4 px-6 flex items-center justify-between">
+  
+  <!-- Left Avatar -->
+  <div class="w-16 h-16 flex items-center justify-center">
+    <img src="ASSETS/avatar.png" alt="Avatar" class="w-14 h-14 rounded-full object-cover border-2 border-white">
+  </div>
+
+  <!-- Center Title -->
+  <div class="flex-1 text-center">
+    <h1 class="text-2xl font-bold tracking-wide">Scout Goalball Pro</h1>
+  </div>
+
+  <!-- Right Logo -->
+  <div class="w-16 h-16 flex items-center justify-center">
+    <img src="ASSETS/logo-apec.png" alt="Logo APEC" class="w-14 h-14 object-contain">
+  </div>
+
+</header>
+<!-- Navigation -->
    <nav class="bg-white border-b border-slate-200 px-2 py-2 flex-shrink-0 overflow-x-auto">
     <div class="flex gap-1 min-w-max"><button class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium transition-all" data-tab="config">⚙️ Config</button> <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all" data-tab="escalacao">👥 Escalação</button> <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all" data-tab="jogo">🎮 Jogo</button> <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all" data-tab="historico">📋 Histórico</button> <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all" data-tab="relatorio">📊 Relatório</button> <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all" data-tab="analise">📈 Análise</button>
     </div>
@@ -439,30 +452,77 @@
       </div><!-- Heat Map -->
       <div class="bg-white rounded-xl p-4 card-shadow">
        <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-slate-800">🗺️ Mapa de Calor - Arremessos</h3><select id="heatmap-filter" class="px-3 py-1 border rounded-lg text-sm"> <option value="all">Todos</option> <option value="goals">Apenas Gols</option> <option value="planned">Dentro do Plano</option> </select>
+        <h3 class="text-lg font-semibold text-slate-800">🗺️ Mapa de Calor - Arremessos</h3>
+<div class="flex flex-wrap gap-2 items-center">
+  <select id="heatmap-filter" class="px-3 py-1 border rounded-lg text-sm">
+    <option value="all">Todos</option>
+    <option value="planned">Dentro do Plano</option>
+  </select>
+
+  <select id="heatmap-result-filter" class="px-3 py-1 border rounded-lg text-sm">
+    <option value="all">Todos Resultados</option>
+    <option value="goals">Apenas Gols</option>
+    <option value="defended">Apenas Defendidas</option>
+    <option value="out">Apenas Fora</option>
+    <option value="penalty">Apenas Penalidade</option>
+  </select>
+
+  <select id="heatmap-athlete-filter" class="px-3 py-1 border rounded-lg text-sm">
+    <option value="all">Todos Jogadores</option>
+  </select>
+
+  <select id="heatmap-metric" class="px-3 py-1 border rounded-lg text-sm">
+    <option value="volume">Mapa por Volume</option>
+    <option value="efficiency">Mapa por Eficiência</option>
+  </select>
+
+  <button id="heatmap-side-toggle" data-side="right" class="px-3 py-1 border rounded-lg text-sm bg-slate-50">
+    Atacando → direita
+  </button>
+</div>
        </div><!-- Court SVG -->
        <div class="flex justify-center">
-        <svg id="court-heatmap" viewbox="0 0 180 90" class="w-full max-w-xl border-2 border-slate-300 rounded-lg bg-gradient-to-b from-blue-100 to-slate-100"><!-- Court outline --> <rect x="0" y="0" width="180" height="90" fill="none" stroke="#334155" stroke-width="1" /> <!-- Center line --> <line x1="90" y1="0" x2="90" y2="90" stroke="#334155" stroke-width="0.5" stroke-dasharray="2,2" /> <!-- Goal areas --> <rect x="0" y="0" width="30" height="90" fill="rgba(239,68,68,0.1)" stroke="#ef4444" stroke-width="0.5" /> <rect x="150" y="0" width="30" height="90" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="0.5" /> <!-- Target zones (opponent side - where we throw) --> <g id="target-zones">
-          <rect class="court-zone heat-zone" data-zone="1" x="0" y="0" width="20" height="30" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="2" x="0" y="30" width="20" height="15" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="2/3" x="0" y="45" width="20" height="0" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="3" x="0" y="30" width="20" height="30" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="M" x="0" y="40" width="20" height="10" fill="rgba(59,130,246,0.2)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="4" x="0" y="45" width="20" height="15" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="4/5" x="0" y="45" width="20" height="0" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="5" x="0" y="45" width="20" height="15" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-          <rect class="court-zone heat-zone" data-zone="6" x="0" y="60" width="20" height="30" fill="rgba(59,130,246,0.1)" stroke="#64748b" stroke-width="0.3" />
-         </g> <!-- Zone labels --> <text x="10" y="18" text-anchor="middle" font-size="6" fill="#475569">
-          1
-         </text> <text x="10" y="38" text-anchor="middle" font-size="6" fill="#475569">
-          2
-         </text> <text x="10" y="47" text-anchor="middle" font-size="6" fill="#475569">
-          M
-         </text> <text x="10" y="56" text-anchor="middle" font-size="6" fill="#475569">
-          5
-         </text> <text x="10" y="78" text-anchor="middle" font-size="6" fill="#475569">
-          6
-         </text> <!-- Throw points container --> <g id="throw-points"></g>
+        <svg id="court-heatmap" viewbox="0 0 180 90" class="w-full max-w-xl border-2 border-slate-300 rounded-lg bg-gradient-to-b from-blue-100 to-slate-100"><!-- Court outline --> <rect x="0" y="0" width="180" height="90" fill="none" stroke="#334155" stroke-width="1" /> <!-- Center line --> <line x1="90" y1="0" x2="90" y2="90" stroke="#334155" stroke-width="0.5" stroke-dasharray="2,2" /> <!-- Goal areas -->
+<rect x="0" y="0" width="30" height="90" fill="rgba(239,68,68,0.08)" stroke="#ef4444" stroke-width="0.5" />
+<rect x="150" y="0" width="30" height="90" fill="rgba(59,130,246,0.08)" stroke="#3b82f6" stroke-width="0.5" />
+
+<!-- 6 faixas no comprimento (cada uma = 3m = 30 unidades no SVG) -->
+<g id="length-zones">
+  <rect class="court-zone" data-length="F1" x="0"   y="0" width="30" height="90" fill="rgba(100,116,139,0.03)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone" data-length="F2" x="30"  y="0" width="30" height="90" fill="rgba(100,116,139,0.02)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone" data-length="F3" x="60"  y="0" width="30" height="90" fill="rgba(100,116,139,0.03)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone" data-length="F4" x="90"  y="0" width="30" height="90" fill="rgba(100,116,139,0.02)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone" data-length="F5" x="120" y="0" width="30" height="90" fill="rgba(100,116,139,0.03)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone" data-length="F6" x="150" y="0" width="30" height="90" fill="rgba(100,116,139,0.02)" stroke="#64748b" stroke-width="0.3"/>
+</g>
+
+<!-- Alvos na TRAVE (faixas horizontais no lado direito, dentro da área do gol) -->
+<g id="target-zones">
+  <rect class="court-zone heat-zone" data-zone="1"   x="150" y="0"  width="30" height="10" fill="rgba(59,130,246,0.12)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="2"   x="150" y="10" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="2/3" x="150" y="20" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="3"   x="150" y="30" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="M"   x="150" y="40" width="30" height="10" fill="rgba(59,130,246,0.16)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="4"   x="150" y="50" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="4/5" x="150" y="60" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="5"   x="150" y="70" width="30" height="10" fill="rgba(59,130,246,0.10)" stroke="#64748b" stroke-width="0.3"/>
+  <rect class="court-zone heat-zone" data-zone="6"   x="150" y="80" width="30" height="10" fill="rgba(59,130,246,0.12)" stroke="#64748b" stroke-width="0.3"/>
+</g>
+
+<!-- Rótulos dos alvos (opcional) -->
+<g font-size="6" fill="#475569" text-anchor="middle">
+  <text x="165" y="7">1</text>
+  <text x="165" y="17">2</text>
+  <text x="165" y="27">2/3</text>
+  <text x="165" y="37">3</text>
+  <text x="165" y="47">M</text>
+  <text x="165" y="57">4</text>
+  <text x="165" y="67">4/5</text>
+  <text x="165" y="77">5</text>
+  <text x="165" y="87">6</text>
+</g>
+
+<!-- Throw points container --> <g id="throw-points"></g>
         </svg>
        </div><!-- Legend -->
        <div class="flex justify-center gap-4 mt-3 text-xs">
@@ -1530,128 +1590,174 @@
       
       document.getElementById('goals-after-bad-block').textContent = goalsAfterBadBlock;
     }
+
+
+function getHeatmapOptions() {
+  return {
+    scope: document.getElementById('heatmap-filter')?.value || 'all',            // all | planned
+    result: document.getElementById('heatmap-result-filter')?.value || 'all',    // all | goals | defended | out | penalty
+    athlete: document.getElementById('heatmap-athlete-filter')?.value || 'all',  // all | athleteNumber
+    metric: document.getElementById('heatmap-metric')?.value || 'volume',        // volume | efficiency
+    side: document.getElementById('heatmap-side-toggle')?.dataset.side || 'right'// right | left
+  };
+}
+
+function mirrorTarget(target) {
+  // Regra do espelho: 1↔6, 2↔5, 2/3↔4/5, 3↔4, M fica M
+  const map = { '1':'6','6':'1','2':'5','5':'2','2/3':'4/5','4/5':'2/3','3':'4','4':'3','M':'M' };
+  return map[target] || target;
+}
+
+function populateHeatmapAthletes() {
+  const sel = document.getElementById('heatmap-athlete-filter');
+  if (!sel) return;
+  // preserva "Todos Jogadores"
+  sel.innerHTML = '<option value="all">Todos Jogadores</option>';
+  (AppState?.config?.myAthletes || []).forEach((a) => {
+    if (!a || (!a.name && !a.number)) return;
+    const val = a.number || a.name;
+    const label = a.number ? `${a.number} - ${a.name || ''}` : (a.name || val);
+    sel.innerHTML += `<option value="${val}">${label}</option>`;
+  });
+}
+
     
-    function renderHeatmap(filter) {
-      const pointsContainer = document.getElementById('throw-points');
-      pointsContainer.innerHTML = '';
-      
-      let events = sdkEvents.filter(e => e.type === 'event' && e.team === 'my');
-      
-      if (filter === 'goals') {
-        events = events.filter(e => e.result === 'gol');
-      } else if (filter === 'planned') {
-        events = events.filter(e => {
-          try {
-            const planned = JSON.parse(e.plannedTargets || '[]');
-            return planned.includes(e.target);
-          } catch {
-            return false;
-          }
-        });
+    
+function renderHeatmap(optionsOrFilter) {
+  const options = (typeof optionsOrFilter === 'string')
+    ? { scope: optionsOrFilter, result: 'all', athlete: 'all', metric: 'volume', side: 'right' }
+    : (optionsOrFilter || getHeatmapOptions());
+
+  const pointsContainer = document.getElementById('throw-points');
+  pointsContainer.innerHTML = '';
+
+  let events = sdkEvents.filter(e => e.type === 'event' && e.team === 'my');
+
+  // Scope filter (planejado vs todos)
+  if (options.scope === 'planned') {
+    events = events.filter(e => {
+      try {
+        const planned = JSON.parse(e.plannedTargets || '[]');
+        return planned.includes(e.target);
+      } catch {
+        return false;
       }
-      
-      // Target Y positions on goal line (right side at x=195)
-      // Court height 9m = 90 units, targets distributed from top (1) to bottom (6)
-      const targetYPositions = {
-        '1': 10,       // far right corner
-        '2': 23,       // right area
-        '2/3': 32,     // right-center corridor
-        '3': 42,       // right of center
-        'M': 50,       // exact center
-        '4': 58,       // left of center
-        '4/5': 68,     // left-center corridor
-        '5': 77,       // left area
-        '6': 90        // far left corner
-      };
-      
-      // Length zones (faixas) - court divided into 6 zones of 3m each (30 units each in SVG)
-      // F1: 5-37, F2: 37-69, F3: 69-100, F4: 100-131, F5: 131-163, F6: 163-195
-      const lengthZones = {
-        '1': { min: 5, max: 37 },
-        '2': { min: 37, max: 69 },
-        '3': { min: 69, max: 100 },
-        '4': { min: 100, max: 131 },
-        '5': { min: 131, max: 163 },
-        '6': { min: 163, max: 195 }
-      };
-      
-      // Count throws per target
-      const zoneCounts = {};
-      events.forEach(e => {
-        zoneCounts[e.target] = (zoneCounts[e.target] || 0) + 1;
-      });
-      
-      const maxCount = Math.max(...Object.values(zoneCounts), 1);
-      
-      // Plot throw points
-      events.forEach((e, idx) => {
-        const targetY = targetYPositions[e.target];
-        if (targetY === undefined) return;
-        
-        // Random X position across court length (attackers typically throw from faixas 1-4)
-        const throwX = 20 + Math.random() * 150; // Distribute across court
-        
-        // Add small random variance around target Y
-        const throwY = targetY + (Math.random() * 6 - 3);
-        
-        // Determine color based on result/plan
-        let color = '#3b82f6'; // blue - normal
-        
-        if (e.result === 'gol') {
-          color = '#ef4444'; // red - goal
-        } else {
-          try {
-            const planned = JSON.parse(e.plannedTargets || '[]');
-            if (planned.includes(e.target)) {
-              color = '#22c55e'; // green - in plan
-            } else if (planned.length > 0) {
-              color = '#eab308'; // yellow - out of plan
-            }
-          } catch {}
+    });
+  }
+
+  // Result filter
+  if (options.result === 'goals') events = events.filter(e => e.result === 'gol');
+  if (options.result === 'defended') events = events.filter(e => e.result === 'defendida');
+  if (options.result === 'out') events = events.filter(e => e.result === 'fora');
+  if (options.result === 'penalty') events = events.filter(e => e.result === 'penalidade');
+
+  // Athlete filter (usa athleteNumber quando existir)
+  if (options.athlete !== 'all') {
+    events = events.filter(e => (e.athleteNumber || e.athleteName) === options.athlete);
+  }
+
+  // Target Y positions (centro de cada faixa de 10 unidades)
+  const targetYPositions = {
+    '1': 5,
+    '2': 15,
+    '2/3': 25,
+    '3': 35,
+    'M': 45,
+    '4': 55,
+    '4/5': 65,
+    '5': 75,
+    '6': 85
+  };
+
+  // Contagens por alvo (volume) e gols por alvo (eficiência)
+  const throwCounts = {};
+  const goalCounts = {};
+
+  events.forEach(e => {
+    const tRaw = (e.target || '').trim();
+    const t = (options.side === 'left') ? mirrorTarget(tRaw) : tRaw;
+
+    if (!targetYPositions.hasOwnProperty(t)) return;
+
+    throwCounts[t] = (throwCounts[t] || 0) + 1;
+    if (e.result === 'gol') goalCounts[t] = (goalCounts[t] || 0) + 1;
+  });
+
+  const maxThrows = Math.max(...Object.values(throwCounts), 1);
+
+  // Plot throw points (pontos perto da trave do lado escolhido)
+  events.forEach((e) => {
+    const tRaw = (e.target || '').trim();
+    const t = (options.side === 'left') ? mirrorTarget(tRaw) : tRaw;
+
+    const targetY = targetYPositions[t];
+    if (targetY === undefined) return;
+
+    // X perto da trave: direita (x ~ 175) ou esquerda (x ~ 5)
+    const throwX = (options.side === 'left')
+      ? (2 + Math.random() * 6)     // 2..8
+      : (172 + Math.random() * 6);  // 172..178
+
+    const throwY = targetY + (Math.random() * 4 - 2);
+
+    // Cor por resultado / plano
+    let color = '#3b82f6'; // normal
+    if (e.result === 'gol') {
+      color = '#ef4444';
+    } else {
+      try {
+        const planned = JSON.parse(e.plannedTargets || '[]');
+        // Atenção: plannedTargets é salvo pelo alvo original do lance.
+        const plannedCheck = (options.side === 'left') ? mirrorTarget(tRaw) : tRaw;
+        if (planned.includes(plannedCheck)) {
+          color = '#22c55e';
+        } else if (planned.length > 0) {
+          color = '#eab308';
         }
-        
-        // Draw throw point
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        circle.setAttribute('cx', throwX);
-        circle.setAttribute('cy', throwY);
-        circle.setAttribute('r', '2');
-        circle.setAttribute('fill', color);
-        circle.setAttribute('opacity', '0.7');
-        pointsContainer.appendChild(circle);
-        
-        // Glow effect for goals
-        if (e.result === 'gol') {
-          const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          glow.setAttribute('cx', throwX);
-          glow.setAttribute('cy', throwY);
-          glow.setAttribute('r', '3.5');
-          glow.setAttribute('fill', 'none');
-          glow.setAttribute('stroke', '#ef4444');
-          glow.setAttribute('stroke-width', '0.8');
-          glow.setAttribute('opacity', '0.4');
-          pointsContainer.appendChild(glow);
-        }
-      });
-      
-      // Update target marker intensity (goal line circles)
-      document.querySelectorAll('.target-marker').forEach(marker => {
-        const targetValue = marker.textContent.trim();
-        const count = zoneCounts[targetValue] || 0;
-        const intensity = count > 0 ? Math.min((count / maxCount) * 0.7 + 0.2, 1) : 0.25;
-        
-        marker.setAttribute('opacity', intensity.toString());
-        
-        // Scale circle size based on activity
-        if (count > 5) {
-          marker.setAttribute('r', '3.2');
-        } else if (count > 2) {
-          marker.setAttribute('r', '2.8');
-        } else {
-          marker.setAttribute('r', '2.5');
-        }
-      });
+      } catch {}
     }
-    
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', throwX);
+    circle.setAttribute('cy', throwY);
+    circle.setAttribute('r', '2');
+    circle.setAttribute('fill', color);
+    circle.setAttribute('opacity', '0.7');
+    pointsContainer.appendChild(circle);
+
+    if (e.result === 'gol') {
+      const glow = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      glow.setAttribute('cx', throwX);
+      glow.setAttribute('cy', throwY);
+      glow.setAttribute('r', '3.5');
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', '#ef4444');
+      glow.setAttribute('stroke-width', '0.8');
+      glow.setAttribute('opacity', '0.4');
+      pointsContainer.appendChild(glow);
+    }
+  });
+
+  // Atualiza intensidade nas faixas (rects .heat-zone)
+  document.querySelectorAll('.heat-zone').forEach(zone => {
+    const z = zone.getAttribute('data-zone');
+    const t = (options.side === 'left') ? mirrorTarget(z) : z;
+
+    const throws = throwCounts[t] || 0;
+    const goals = goalCounts[t] || 0;
+
+    let intensity = 0.12; // base
+    if (options.metric === 'efficiency') {
+      const eff = throws > 0 ? (goals / throws) : 0;
+      intensity = 0.12 + (eff * 0.75); // 0.12..0.87
+    } else {
+      intensity = throws > 0 ? (0.12 + Math.min((throws / maxThrows) * 0.75, 0.75)) : 0.12;
+    }
+
+    zone.setAttribute('fill', `rgba(59,130,246,${intensity.toFixed(3)})`);
+  });
+}
+
     // =====================================================
     // ANÁLISE TAB FUNCTIONS
     // =====================================================
@@ -2006,14 +2112,37 @@
           btn.classList.remove('bg-slate-200', 'text-slate-700');
           btn.classList.add('bg-blue-600', 'text-white');
           updateReportStats(btn.dataset.period);
-          renderHeatmap(document.getElementById('heatmap-filter').value);
+          renderHeatmap(getHeatmapOptions());
         });
       });
       
-      document.getElementById('heatmap-filter').addEventListener('change', (e) => {
-        renderHeatmap(e.target.value);
-      });
-    }
+      document.getElementById('heatmap-filter').addEventListener('change', () => {
+  renderHeatmap(getHeatmapOptions());
+});
+
+document.getElementById('heatmap-result-filter').addEventListener('change', () => {
+  renderHeatmap(getHeatmapOptions());
+});
+
+document.getElementById('heatmap-athlete-filter').addEventListener('change', () => {
+  renderHeatmap(getHeatmapOptions());
+});
+
+document.getElementById('heatmap-metric').addEventListener('change', () => {
+  renderHeatmap(getHeatmapOptions());
+});
+
+document.getElementById('heatmap-side-toggle').addEventListener('click', (e) => {
+  const btn = e.currentTarget;
+  const side = btn.dataset.side === 'right' ? 'left' : 'right';
+  btn.dataset.side = side;
+  btn.textContent = side === 'right' ? 'Atacando → direita' : 'Atacando → esquerda';
+  renderHeatmap(getHeatmapOptions());
+});
+
+populateHeatmapAthletes();
+
+}
     
     // =====================================================
     // INITIALIZATION
