@@ -631,7 +631,8 @@
         defaultConfig,
         onConfigChange: async (config) => {
           const title = config.app_title || defaultConfig.app_title;
-          document.getElementById('app-title').textContent = title;
+          const titleEl = document.getElementById('app-title');
+          if (titleEl) titleEl.textContent = title;
         },
         mapToCapabilities: (config) => ({
           recolorables: [],
@@ -1050,7 +1051,7 @@
       const subOutIdx = document.getElementById('sub-out').value;
       const subInIdx = document.getElementById('sub-in').value;
       
-      if (!subOutIdx || !subInIdx) {
+      if (subOutIdx === '' || subInIdx === '') {
         showToast('⚠️ Selecione os atletas para a substituição');
         return;
       }
@@ -1225,7 +1226,7 @@
     }
     
     async function saveAttack() {
-      if (!attackState.athlete || !attackState.ballType || !attackState.target || !attackState.result) {
+      if (attackState.athlete === '' || !attackState.ballType || !attackState.target || !attackState.result) {
         showToast('⚠️ Preencha todos os campos obrigatórios');
         return;
       }
@@ -1308,7 +1309,7 @@
     }
     
     async function saveTargetChange() {
-      if (!targetChangeState.athlete || targetChangeState.newTargets.length === 0) {
+      if (targetChangeState.athlete === '' || targetChangeState.newTargets.length === 0) {
         showToast('⚠️ Selecione o atleta e os novos alvos');
         return;
       }
@@ -1361,7 +1362,10 @@
     
     function updateScore() {
       const score = getScoreForMatch(AppState.matchId);
-      document.getElementById('match-score').textContent = `${score.myGoals} - ${score.oppGoals}`;
+      const scoreEl = document.getElementById('match-score');
+      if (scoreEl) {
+        scoreEl.textContent = `${score.myGoals} - ${score.oppGoals}`;
+      }
     }
     
     function renderRecentEvents() {
