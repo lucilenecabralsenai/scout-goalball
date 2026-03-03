@@ -166,8 +166,7 @@
          </div>
         </div>
        </div><!-- Bench -->
-        (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
-diff --git a/index.html b/index.html
+        diff --git a/index.html b/index.html
 index afe79915c6b0ab4045a7230a0341687d631a332b..487b93b8976d4d1d5cfd350f201b7cb1202a6984 100644
 --- a/index.html
 +++ b/index.html
@@ -1329,6 +1328,3 @@ index afe79915c6b0ab4045a7230a0341687d631a332b..487b93b8976d4d1d5cfd350f201b7cb1
 -</html>
 \ No newline at end of file
 +</html>
- 
-EOF
-)
