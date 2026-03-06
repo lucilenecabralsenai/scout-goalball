@@ -201,6 +201,8 @@
       <div class="grid grid-cols-2 gap-3"><button id="btn-attack" class="bg-gradient-to-br from-green-500 to-green-700 text-white p-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"> ⚡ Registrar Ataque </button> <button id="btn-change-target" class="bg-gradient-to-br from-orange-500 to-orange-700 text-white p-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"> 🎯 Mudança de Alvo </button>
      </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><button id="btn-end-match" class="bg-gradient-to-br from-red-500 to-red-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🏁 Encerrar Partida </button> <button id="btn-new-match" class="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🆕 Nova Partida </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><button id="btn-quick-sub" class="bg-gradient-to-br from-amber-500 to-amber-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🔄 Substituição </button> <button id="btn-timeout" class="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> ⏱️ Timeout </button>
       </div><div class="bg-white rounded-xl p-3 card-shadow border border-slate-200">
        <div class="text-sm text-slate-600">Posse de bola atual</div>
        <div id="possession-indicator" class="text-lg font-bold text-blue-700">Minha Equipe</div>
@@ -257,6 +259,67 @@
           <div class="grid grid-cols-9 gap-1" id="new-target-grid"><button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="1">1</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="2">2</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="2/3">2/3</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="3">3</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="M">M</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="4">4</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="4/5">4/5</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="5">5</button> <button class="new-target-btn px-2 py-2 border-2 border-slate-300 rounded text-xs font-medium" data-target="6">6</button>
           </div>
          </div><button id="save-target-change" class="w-full btn-primary text-white py-3 rounded-xl font-semibold"> 💾 Salvar Mudança </button>
+        </div>
+       </div>
+      </div><!-- Quick Substitution Modal -->
+      <div id="quick-sub-modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+       <div class="bg-white rounded-2xl w-full max-w-md">
+        <div class="border-b px-4 py-3 flex items-center justify-between">
+         <h3 class="text-lg font-semibold">🔄 Substituição Rápida</h3><button id="close-quick-sub-modal" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
+        </div>
+        <div class="p-4 space-y-3">
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Equipe</label><select id="quick-sub-team" class="w-full px-3 py-2 border border-slate-300 rounded-lg"><option value="my">Minha Equipe</option><option value="opponent">Adversário</option></select></div>
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Atleta que sai</label><select id="quick-sub-out" class="w-full px-3 py-2 border border-slate-300 rounded-lg"><option value="">Selecionar atleta</option></select></div>
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Atleta que entra</label><select id="quick-sub-in" class="w-full px-3 py-2 border border-slate-300 rounded-lg"><option value="">Selecionar atleta</option></select></div>
+         <button id="save-quick-sub" class="w-full btn-success text-white py-3 rounded-xl font-semibold">✅ Confirmar Substituição</button>
+        </div>
+       </div>
+      </div><!-- Timeout Action Modal -->
+      <div id="timeout-action-modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+       <div class="bg-white rounded-2xl w-full max-w-md">
+        <div class="border-b px-4 py-3 flex items-center justify-between">
+         <h3 class="text-lg font-semibold">⏱️ Registrar Timeout</h3><button id="close-timeout-action-modal" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
+        </div>
+        <div class="p-4 space-y-3">
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Equipe solicitante</label><select id="timeout-team-select" class="w-full px-3 py-2 border border-slate-300 rounded-lg"><option value="my">Minha Equipe</option><option value="opponent">Adversário</option></select></div>
+         <button id="confirm-timeout" class="w-full btn-primary text-white py-3 rounded-xl font-semibold">📊 Confirmar e abrir mini relatório</button>
+        </div>
+       </div>
+      </div><!-- Timeout Mini Report Modal -->
+      <div id="timeout-report-modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-3">
+       <div class="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between z-10">
+         <div>
+          <h3 class="text-lg font-semibold">⏱️ Mini Relatório de Timeout</h3>
+          <p id="timeout-report-subtitle" class="text-sm text-slate-600">Resumo rápido do momento da partida</p>
+         </div>
+         <button id="close-timeout-report" class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700">FECHAR</button>
+        </div>
+        <div class="p-4 md:p-5 space-y-4">
+         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="rounded-lg border border-blue-100 bg-blue-50 p-3"><div class="text-xs text-slate-600">Equipe do timeout</div><div id="timeout-team" class="text-sm font-bold text-blue-800">-</div></div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-600">Placar atual</div><div id="timeout-score" class="text-sm font-bold">0 x 0</div></div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-600">Período</div><div id="timeout-phase" class="text-sm font-bold">-</div></div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-600">Total de lances</div><div id="timeout-total-events" class="text-sm font-bold">0</div></div>
+         </div>
+         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="rounded-lg border p-3"><h4 class="font-semibold text-sm mb-2">Indicadores - Minha Equipe</h4><div id="timeout-my-indicators" class="text-sm text-slate-700 space-y-1"></div></div>
+          <div class="rounded-lg border p-3"><h4 class="font-semibold text-sm mb-2">Indicadores - Adversário</h4><div id="timeout-opp-indicators" class="text-sm text-slate-700 space-y-1"></div></div>
+          <div class="rounded-lg border p-3"><h4 class="font-semibold text-sm mb-2">Resumo de ações</h4><div id="timeout-actions-summary" class="text-sm text-slate-700 space-y-1"></div></div>
+         </div>
+         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-3"><h4 class="font-semibold text-sm mb-1">Banco de pedidos - Minha Equipe</h4><div id="timeout-my-requests" class="text-sm text-slate-700 space-y-1"></div></div>
+          <div class="rounded-lg border border-rose-200 bg-rose-50 p-3"><h4 class="font-semibold text-sm mb-1">Banco de pedidos - Adversário</h4><div id="timeout-opp-requests" class="text-sm text-slate-700 space-y-1"></div></div>
+         </div>
+         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <h4 class="font-semibold text-sm mb-2">Quadra de áreas exploradas</h4>
+          <p class="text-xs text-slate-500 mb-3">Intensidade por zona-alvo registrada até o timeout (azul: minha equipe, vermelho: adversário).</p>
+          <div id="timeout-court-container" class="w-full"></div>
+         </div>
+         <div class="rounded-lg border p-3">
+          <h4 class="font-semibold text-sm mb-2">Últimos lances antes do timeout</h4>
+          <div id="timeout-last-events" class="space-y-2 text-sm"></div>
+         </div>
         </div>
        </div>
       </div><!-- Live Stats -->
@@ -629,7 +692,10 @@
       currentTargets: {},
       events: [],
       matchId: null,
-      archivedMatches: []
+      archivedMatches: [],
+      matchRules: {
+        firstHalfPenaltyApplied: { my: false, opponent: false }
+      }
     };
     
     // Local storage for offline persistence
@@ -667,7 +733,7 @@
     // Data Handler for Data SDK
     const dataHandler = {
       onDataChanged(data) {
-        sdkEvents = data.filter(d => d.type === 'event' || d.type === 'substitution' || d.type === 'target_change');
+        sdkEvents = data.filter(d => d.type === 'event' || d.type === 'substitution' || d.type === 'target_change' || d.type === 'timeout');
         AppState.events = sdkEvents;
         saveToLocalStorage();
         updateAllStats();
@@ -708,7 +774,8 @@
           currentTargets: AppState.currentTargets,
           events: AppState.events,
           archivedMatches: AppState.archivedMatches,
-          matchId: AppState.matchId
+          matchId: AppState.matchId,
+          matchRules: AppState.matchRules
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch (e) {
@@ -734,6 +801,11 @@
           AppState.currentTargets = parsed.currentTargets || {};
           AppState.events = Array.isArray(parsed.events) ? parsed.events : [];
           AppState.archivedMatches = Array.isArray(parsed.archivedMatches) ? parsed.archivedMatches : [];
+          AppState.matchRules = parsed.matchRules || AppState.matchRules;
+          AppState.matchRules.firstHalfPenaltyApplied = {
+            my: Boolean(parsed?.matchRules?.firstHalfPenaltyApplied?.my),
+            opponent: Boolean(parsed?.matchRules?.firstHalfPenaltyApplied?.opponent)
+          };
           sdkEvents = [...AppState.events];
           AppState.matchId = parsed.matchId || Date.now().toString();
         } else {
@@ -773,6 +845,79 @@
       return team === 'my'
         ? (AppState.config.myTeam || 'Minha Equipe')
         : (AppState.config.opponentTeam || 'Adversário');
+    }
+
+    function resetRequestControl() {
+      AppState.matchRules = {
+        firstHalfPenaltyApplied: { my: false, opponent: false }
+      };
+    }
+
+    function getRequestEvents(matchId = AppState.matchId) {
+      return sdkEvents.filter(e => (e.type === 'timeout' || e.type === 'substitution') && e.matchId === matchId);
+    }
+
+    function getRequestUsage(team, matchId = AppState.matchId) {
+      const events = getRequestEvents(matchId).filter(e => e.team === team);
+      const used1T = events.filter(e => e.phase === '1T').length;
+      const used2T = events.filter(e => e.phase === '2T').length;
+      const usedTotal = events.length;
+      const firstHalfPenaltyApplied = Boolean(AppState.matchRules?.firstHalfPenaltyApplied?.[team]);
+      const totalAvailable = 4 - (firstHalfPenaltyApplied ? 1 : 0);
+      return {
+        used1T,
+        used2T,
+        usedTotal,
+        firstHalfPenaltyApplied,
+        totalAvailable,
+        remaining: Math.max(0, totalAvailable - usedTotal)
+      };
+    }
+
+    function ensureFirstHalfRequestRule(nextPhase) {
+      if (AppState.lineup.phase !== '1T' || nextPhase === '1T') return;
+      ['my', 'opponent'].forEach(team => {
+        if (AppState.matchRules.firstHalfPenaltyApplied[team]) return;
+        const usage = getRequestUsage(team);
+        if (usage.used1T === 0) {
+          AppState.matchRules.firstHalfPenaltyApplied[team] = true;
+        }
+      });
+      saveToLocalStorage();
+    }
+
+    function canUseRequest(team) {
+      return getRequestUsage(team).remaining > 0;
+    }
+
+    function updateQuickSubSelectors() {
+      const team = document.getElementById('quick-sub-team').value;
+      const outSelect = document.getElementById('quick-sub-out');
+      const inSelect = document.getElementById('quick-sub-in');
+      outSelect.innerHTML = '<option value="">Selecionar atleta</option>';
+      inSelect.innerHTML = '<option value="">Selecionar atleta</option>';
+
+      if (team === 'my') {
+        const onCourt = [AppState.lineup.left, AppState.lineup.center, AppState.lineup.right].filter(v => v !== null);
+        onCourt.forEach(idx => {
+          const athlete = AppState.config.myAthletes[idx];
+          if (!athlete) return;
+          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          outSelect.innerHTML += `<option value="${idx}">${label}</option>`;
+        });
+        AppState.config.myAthletes.forEach((athlete, idx) => {
+          if (!(athlete.name || athlete.number) || onCourt.includes(idx)) return;
+          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
+        });
+      } else {
+        AppState.config.opponentAthletes.forEach((athlete, idx) => {
+          if (!(athlete.name || athlete.number)) return;
+          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          outSelect.innerHTML += `<option value="${idx}">${label}</option>`;
+          inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
+        });
+      }
     }
 
     function updatePossessionDisplay() {
@@ -868,6 +1013,7 @@
         ];
       }
       AppState.matchId = Date.now().toString();
+      resetRequestControl();
       setPossessionForPhase(AppState.lineup.phase);
       renderHistoryMatchSelector();
       renderReportMatchSelector();
@@ -965,6 +1111,7 @@
 
       const previousMatchId = AppState.matchId;
       AppState.matchId = Date.now().toString();
+      resetRequestControl();
       setPossessionForPhase(AppState.lineup.phase);
       saveToLocalStorage();
       renderHistoryMatchSelector();
@@ -1183,29 +1330,26 @@
       });
     }
     
-    async function performSubstitution() {
-      const subOutIdx = document.getElementById('sub-out').value;
-      const subInIdx = document.getElementById('sub-in').value;
-      
-      if (subOutIdx === '' || subInIdx === '') {
-        showToast('⚠️ Selecione os atletas para a substituição');
-        return;
+    async function registerSubstitution({ team, subOutIdx, subInIdx, enforceMyLineup = false }) {
+      if (!canUseRequest(team)) {
+        showToast(`⚠️ ${getTeamLabel(team)} sem pedidos restantes (timeout/substituição).`);
+        return false;
       }
-      
-      // Find position of player going out
-      let position = null;
-      if (AppState.lineup.left == subOutIdx) position = 'left';
-      else if (AppState.lineup.center == subOutIdx) position = 'center';
-      else if (AppState.lineup.right == subOutIdx) position = 'right';
-      
-      if (!position) {
-        showToast('⚠️ Atleta selecionado não está em quadra');
-        return;
+
+      let position = '';
+      if (team === 'my' && enforceMyLineup) {
+        if (AppState.lineup.left == subOutIdx) position = 'left';
+        else if (AppState.lineup.center == subOutIdx) position = 'center';
+        else if (AppState.lineup.right == subOutIdx) position = 'right';
+
+        if (!position) {
+          showToast('⚠️ Atleta selecionado não está em quadra');
+          return false;
+        }
+
+        AppState.lineup[position] = parseInt(subInIdx, 10);
       }
-      
-      // Update lineup
-      AppState.lineup[position] = parseInt(subInIdx);
-      
+
       const subEvent = {
         type: 'substitution',
         matchId: AppState.matchId,
@@ -1213,8 +1357,8 @@
         phase: AppState.lineup.phase,
         subOut: subOutIdx,
         subIn: subInIdx,
-        position: position,
-        team: 'my',
+        position,
+        team,
         athleteNumber: '',
         athleteName: '',
         ballType: '',
@@ -1231,23 +1375,75 @@
       if (!canRegisterEvent) {
         showToast('⚠️ Limite de 999 registros atingido! Substituição aplicada sem registro no histórico.');
       }
-      
-      // Record substitution event
-     if (canRegisterEvent && window.dataSdk) {
+
+      if (canRegisterEvent && window.dataSdk) {
         const result = await window.dataSdk.create(subEvent);
-        if (!result.isOk) {
-          createLocalEvent(subEvent);
-        }
+        if (!result.isOk) createLocalEvent(subEvent);
       } else if (canRegisterEvent) {
         createLocalEvent(subEvent);
       }
-      
+
       saveToLocalStorage();
       updateLineupDisplay();
+      return true;
+    }
+
+    async function performSubstitution() {
+      const subOutIdx = document.getElementById('sub-out').value;
+      const subInIdx = document.getElementById('sub-in').value;
+
+      if (subOutIdx === '' || subInIdx === '') {
+        showToast('⚠️ Selecione os atletas para a substituição');
+        return;
+      }
+
+      const ok = await registerSubstitution({
+        team: 'my',
+        subOutIdx,
+        subInIdx,
+        enforceMyLineup: true
+      });
+
+      if (!ok) return;
       showToast('✅ Substituição realizada!');
-      
       document.getElementById('sub-out').value = '';
       document.getElementById('sub-in').value = '';
+    }
+
+    function openQuickSubModal() {
+      document.getElementById('quick-sub-modal').classList.remove('hidden');
+      document.getElementById('quick-sub-team').value = 'my';
+      updateQuickSubSelectors();
+    }
+
+    function closeQuickSubModal() {
+      document.getElementById('quick-sub-modal').classList.add('hidden');
+    }
+
+    async function saveQuickSubstitution() {
+      const team = document.getElementById('quick-sub-team').value;
+      const subOutIdx = document.getElementById('quick-sub-out').value;
+      const subInIdx = document.getElementById('quick-sub-in').value;
+
+      if (subOutIdx === '' || subInIdx === '') {
+        showToast('⚠️ Selecione atleta que sai e atleta que entra');
+        return;
+      }
+      if (subOutIdx === subInIdx) {
+        showToast('⚠️ O atleta que entra deve ser diferente do atleta que sai');
+        return;
+      }
+
+      const ok = await registerSubstitution({
+        team,
+        subOutIdx,
+        subInIdx,
+        enforceMyLineup: team === 'my'
+      });
+
+      if (!ok) return;
+      closeQuickSubModal();
+      showToast('✅ Substituição registrada na aba Jogo!');
     }
     
     function renderTargetPlan() {
@@ -1424,6 +1620,180 @@
       updateScore();
     }
     
+
+    function getPhaseLabel(phase) {
+      return phase === '1T' ? '1º Tempo' : phase === '2T' ? '2º Tempo' : phase === 'PR' ? 'Prorrogação' : phase === 'PN' ? 'Penalidades' : (phase || '-');
+    }
+
+    function toPercent(value, total) {
+      return total > 0 ? `${Math.round((value / total) * 100)}%` : '0%';
+    }
+
+    function buildTimeoutCourt(events) {
+      const targets = ['1','2','2/3','3','M','4','4/5','5','6'];
+      const myCounts = Object.fromEntries(targets.map(t => [t, 0]));
+      const oppCounts = Object.fromEntries(targets.map(t => [t, 0]));
+      events.forEach(event => {
+        if (!targets.includes(event.target)) return;
+        if (event.team === 'my') myCounts[event.target] += 1;
+        if (event.team === 'opponent') oppCounts[event.target] += 1;
+      });
+
+      const maxCount = Math.max(1, ...targets.map(t => Math.max(myCounts[t], oppCounts[t])));
+      const rowHeight = 18;
+      const rows = targets.map((target, idx) => {
+        const y = idx * rowHeight;
+        const myOpacity = 0.12 + (myCounts[target] / maxCount) * 0.78;
+        const oppOpacity = 0.12 + (oppCounts[target] / maxCount) * 0.78;
+        return `
+          <rect x="5" y="${y + 4}" width="26" height="14" fill="rgba(37,99,235,${myOpacity.toFixed(2)})" stroke="#1e3a8a" stroke-width="0.4"></rect>
+          <rect x="149" y="${y + 4}" width="26" height="14" fill="rgba(225,29,72,${oppOpacity.toFixed(2)})" stroke="#9f1239" stroke-width="0.4"></rect>
+          <text x="18" y="${y + 14}" text-anchor="middle" font-size="5" fill="#fff">${target}</text>
+          <text x="162" y="${y + 14}" text-anchor="middle" font-size="5" fill="#fff">${target}</text>
+        `;
+      }).join('');
+
+      const strips = Array.from({ length: 6 }, (_, i) => {
+        const x = 31 + (i * 19.67);
+        return `<rect x="${x.toFixed(2)}" y="4" width="19.67" height="162" fill="${i % 2 === 0 ? '#f8fafc' : '#eef2ff'}" stroke="#1f2937" stroke-width="0.4"></rect>`;
+      }).join('');
+
+      return `
+        <svg viewBox="0 0 180 170" class="w-full max-w-3xl mx-auto border rounded-lg bg-white">
+          <rect x="1" y="1" width="178" height="168" fill="none" stroke="#0f172a" stroke-width="1.2"></rect>
+          ${strips}
+          <line x1="90" y1="4" x2="90" y2="166" stroke="#334155" stroke-width="0.7" stroke-dasharray="2,2"></line>
+          ${rows}
+          <text x="18" y="3" text-anchor="middle" font-size="5" fill="#1e3a8a">Minha equipe</text>
+          <text x="162" y="3" text-anchor="middle" font-size="5" fill="#9f1239">Adversário</text>
+        </svg>
+      `;
+    }
+
+    function getTeamIndicators(events, team) {
+      const teamEvents = events.filter(e => e.team === team);
+      const goals = teamEvents.filter(e => e.result === 'gol').length;
+      const defended = teamEvents.filter(e => e.result === 'defendida').length;
+      const penalties = teamEvents.filter(e => e.result === 'penalidade').length;
+      return [
+        `Arremessos: <strong>${teamEvents.length}</strong>`,
+        `Gols: <strong>${goals}</strong>`,
+        `Aproveitamento: <strong>${toPercent(goals, teamEvents.length)}</strong>`,
+        `Defendidas: <strong>${defended}</strong>`,
+        `Penalidades: <strong>${penalties}</strong>`
+      ];
+    }
+
+    function formatRequestSummary(team) {
+      const usage = getRequestUsage(team);
+      return `
+        <div>Pedidos restantes: <strong>${usage.remaining}</strong> / ${usage.totalAvailable}</div>
+        <div>Pedidos usados: <strong>${usage.usedTotal}</strong> (1ºT: ${usage.used1T} | 2ºT: ${usage.used2T})</div>
+        <div>Penalidade por 1ºT sem pedido: <strong>${usage.firstHalfPenaltyApplied ? 'Aplicada' : 'Não aplicada'}</strong></div>
+      `;
+    }
+
+    async function registerTimeout(team) {
+      if (!canUseRequest(team)) {
+        showToast(`⚠️ ${getTeamLabel(team)} sem pedidos restantes (timeout/substituição).`);
+        return false;
+      }
+
+      const timeoutEvent = {
+        type: 'timeout',
+        matchId: AppState.matchId,
+        timestamp: new Date().toISOString(),
+        phase: AppState.lineup.phase,
+        team,
+        athleteNumber: '',
+        athleteName: '',
+        ballType: '',
+        target: '',
+        result: '',
+        penaltyType: '',
+        defenseStructure: '',
+        ballBehavior: '',
+        plannedTargets: '',
+        newTargets: '',
+        subIn: '',
+        subOut: '',
+        position: ''
+      };
+
+      if (window.dataSdk) {
+        const result = await window.dataSdk.create(timeoutEvent);
+        if (!result.isOk) createLocalEvent(timeoutEvent);
+      } else {
+        createLocalEvent(timeoutEvent);
+      }
+      saveToLocalStorage();
+      return true;
+    }
+
+    function openTimeoutActionModal() {
+      document.getElementById('timeout-team-select').value = 'my';
+      document.getElementById('timeout-action-modal').classList.remove('hidden');
+    }
+
+    function closeTimeoutActionModal() {
+      document.getElementById('timeout-action-modal').classList.add('hidden');
+    }
+
+    async function confirmTimeoutAction() {
+      const team = document.getElementById('timeout-team-select').value;
+      const ok = await registerTimeout(team);
+      if (!ok) return;
+      closeTimeoutActionModal();
+      openTimeoutReport(team);
+    }
+
+    function openTimeoutReport(team) {
+      const attackEvents = getCurrentMatchEvents().filter(e => e.type === 'event');
+      const score = getScoreForMatch(AppState.matchId);
+      const timeoutTeamLabel = getTeamLabel(team);
+      const myRequests = formatRequestSummary('my');
+      const oppRequests = formatRequestSummary('opponent');
+
+      const allResults = {
+        gol: attackEvents.filter(e => e.result === 'gol').length,
+        defendida: attackEvents.filter(e => e.result === 'defendida').length,
+        blockout: attackEvents.filter(e => e.result === 'blockout').length,
+        fora: attackEvents.filter(e => e.result === 'fora').length,
+        penalidade: attackEvents.filter(e => e.result === 'penalidade').length,
+        ballover: attackEvents.filter(e => e.result === 'ballover').length
+      };
+
+      document.getElementById('timeout-report-subtitle').textContent = `Timeout solicitado por ${timeoutTeamLabel}`;
+      document.getElementById('timeout-team').textContent = timeoutTeamLabel;
+      document.getElementById('timeout-score').textContent = `${score.myGoals} x ${score.oppGoals}`;
+      document.getElementById('timeout-phase').textContent = getPhaseLabel(AppState.lineup.phase);
+      document.getElementById('timeout-total-events').textContent = attackEvents.length;
+      document.getElementById('timeout-my-indicators').innerHTML = getTeamIndicators(attackEvents, 'my').map(v => `<div>${v}</div>`).join('');
+      document.getElementById('timeout-opp-indicators').innerHTML = getTeamIndicators(attackEvents, 'opponent').map(v => `<div>${v}</div>`).join('');
+      document.getElementById('timeout-actions-summary').innerHTML = `
+        <div>⚽ Gols: <strong>${allResults.gol}</strong></div>
+        <div>🧤 Defendidas: <strong>${allResults.defendida}</strong></div>
+        <div>🚫 Blockouts: <strong>${allResults.blockout}</strong></div>
+        <div>❌ Fora: <strong>${allResults.fora}</strong></div>
+        <div>⚠️ Penalidades: <strong>${allResults.penalidade}</strong></div>
+        <div>🔁 Ball Over: <strong>${allResults.ballover}</strong></div>
+      `;
+      document.getElementById('timeout-my-requests').innerHTML = myRequests;
+      document.getElementById('timeout-opp-requests').innerHTML = oppRequests;
+
+      const lastEvents = attackEvents.slice(-4).reverse();
+      document.getElementById('timeout-last-events').innerHTML = lastEvents.length
+        ? lastEvents.map(event => `<div class="p-2 rounded border ${event.team === 'my' ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}">${new Date(event.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit', minute:'2-digit'})} • ${getTeamLabel(event.team)} • ${event.athleteNumber || '?'} ${event.athleteName || ''} • ${event.ballType} / ${event.target} / ${event.result}</div>`).join('')
+        : '<p class="text-slate-500">Sem lances registrados até o momento.</p>';
+
+      document.getElementById('timeout-court-container').innerHTML = buildTimeoutCourt(attackEvents);
+      document.getElementById('timeout-report-modal').classList.remove('hidden');
+    }
+
+    function closeTimeoutReport() {
+      document.getElementById('timeout-report-modal').classList.add('hidden');
+    }
+
     function openTargetChangeModal() {
       document.getElementById('target-change-modal').classList.remove('hidden');
       targetChangeState = { athlete: '', newTargets: [] };
@@ -1519,6 +1889,7 @@
       }
       
       container.innerHTML = events.map(e => {
+
         const teamClass = e.team === 'my' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
         const resultEmoji = e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';        
         return `
@@ -1565,7 +1936,7 @@
       
       const selectedMatchId = getSelectedHistoryMatchId();
       renderHistoryMeta();
-      let events = sdkEvents.filter(e => (e.type === 'event' || e.type === 'substitution' || e.type === 'target_change') && e.matchId === selectedMatchId);
+      let events = sdkEvents.filter(e => (e.type === 'event' || e.type === 'substitution' || e.type === 'target_change' || e.type === 'timeout') && e.matchId === selectedMatchId);
       
       if (filter !== 'all') {
         events = events.filter(e => e.phase === filter);
@@ -1583,15 +1954,16 @@
         const time = new Date(e.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         
         if (e.type === 'substitution') {
-          const outAthlete = AppState.config.myAthletes[e.subOut];
-          const inAthlete = AppState.config.myAthletes[e.subIn];
+          const athletes = e.team === 'opponent' ? AppState.config.opponentAthletes : AppState.config.myAthletes;
+          const outAthlete = athletes?.[e.subOut];
+          const inAthlete = athletes?.[e.subIn];
           return `
             <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200" data-id="${getEventId(e)}">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">🔄</span>
                   <div>
-                    <div class="text-sm font-medium">Substituição</div>
+                    <div class="text-sm font-medium">Substituição (${getTeamLabel(e.team)})</div>
                     <div class="text-xs text-slate-600">
                       Saiu: ${outAthlete?.number || '?'} - ${outAthlete?.name || 'N/A'} → 
                       Entrou: ${inAthlete?.number || '?'} - ${inAthlete?.name || 'N/A'}
@@ -1631,6 +2003,28 @@
           `;
         }
         
+        if (e.type === 'timeout') {
+          const team = getTeamLabel(e.team);
+          return `
+            <div class="p-3 bg-indigo-50 rounded-lg border border-indigo-200" data-id="${getEventId(e)}">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">⏱️</span>
+                  <div>
+                    <div class="text-sm font-medium">Timeout</div>
+                    <div class="text-xs text-slate-600">Solicitado por: ${team}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs bg-indigo-200 px-2 py-0.5 rounded">${e.phase}</span>
+                  <span class="text-xs text-slate-500">${time}</span>
+                  <button class="delete-event-btn text-red-500 hover:text-red-700 p-1" data-id="${getEventId(e)}">🗑️</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
         const teamClass = e.team === 'my' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
         const resultEmoji = e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';
         
@@ -2254,6 +2648,7 @@ function renderHeatmap(optionsOrFilter) {
           });
           btn.classList.remove('bg-slate-200', 'text-slate-700');
           btn.classList.add('bg-blue-600', 'text-white');
+          ensureFirstHalfRequestRule(btn.dataset.phase);
           AppState.lineup.phase = btn.dataset.phase;
           document.getElementById('current-phase').textContent = 
             btn.dataset.phase === '1T' ? '1º Tempo' : 
@@ -2323,6 +2718,14 @@ function renderHeatmap(optionsOrFilter) {
         if (!confirm('Deseja iniciar nova partida agora?')) return;
         startNewMatch();
       });
+      document.getElementById('btn-quick-sub').addEventListener('click', openQuickSubModal);
+      document.getElementById('btn-timeout').addEventListener('click', openTimeoutActionModal);
+      document.getElementById('close-timeout-report').addEventListener('click', closeTimeoutReport);
+      document.getElementById('close-quick-sub-modal').addEventListener('click', closeQuickSubModal);
+      document.getElementById('quick-sub-team').addEventListener('change', updateQuickSubSelectors);
+      document.getElementById('save-quick-sub').addEventListener('click', saveQuickSubstitution);
+      document.getElementById('close-timeout-action-modal').addEventListener('click', closeTimeoutActionModal);
+      document.getElementById('confirm-timeout').addEventListener('click', confirmTimeoutAction);
       document.getElementById('close-attack-modal').addEventListener('click', closeAttackModal);
       document.getElementById('close-target-modal').addEventListener('click', closeTargetChangeModal);
      
