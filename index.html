@@ -3747,7 +3747,7 @@ populateHeatmapAthletes();
         window.addEventListener('mouseup', endDraw);
 
         drawCanvas.addEventListener('touchstart', startDraw, { passive: false });
-        window.addEventListener('touchmove', moveDraw, { passive: false });
+        drawCanvas.addEventListener('touchmove', moveDraw, { passive: false });
         window.addEventListener('touchend', endDraw);
         window.addEventListener('touchcancel', endDraw);
 
@@ -3756,7 +3756,7 @@ populateHeatmapAthletes();
         window.addEventListener('mouseup', endMoveAthlete);
 
         playersLayer.addEventListener('touchstart', startMoveAthlete, { passive: false });
-        window.addEventListener('touchmove', moveAthlete, { passive: false });
+        playersLayer.addEventListener('touchmove', moveAthlete, { passive: false });
         window.addEventListener('touchend', endMoveAthlete);
         window.addEventListener('touchcancel', endMoveAthlete);
       }
