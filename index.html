@@ -1484,6 +1484,11 @@
       if (tabId === 'analise') {
         renderAnalysis();
       }
+      if (tabId === 'prancheta') {
+        requestAnimationFrame(() => {
+          ensureTacticalBoardReady();
+        });
+      }
     }
     
     // =====================================================
@@ -3387,6 +3392,7 @@ populateHeatmapAthletes();
       redrawTacticalDrawings();
       bindTacticalEvents();
       window.addEventListener('resize', () => {
+        ensureTacticalBoardReady();
         setupTacticalBoardSize();
         drawTacticalCourt();
         redrawTacticalDrawings();
@@ -3404,6 +3410,22 @@ populateHeatmapAthletes();
         c.width = rect.width;
         c.height = rect.height;
       });
+    }
+
+
+    function ensureTacticalBoardReady() {
+      const drawCanvas = document.getElementById('tactical-draw-canvas');
+      const board = document.getElementById('tactical-board');
+      if (!drawCanvas || !board) return false;
+
+      const rect = board.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
+
+      setupTacticalBoardSize();
+      drawTacticalCourt();
+      redrawTacticalDrawings();
+      renderTacticalPlayers();
+      return drawCanvas.width > 0 && drawCanvas.height > 0;
     }
 
     function drawTacticalCourt() {
@@ -3558,6 +3580,9 @@ populateHeatmapAthletes();
       const playersLayer = document.getElementById('tactical-players-layer');
 
       const startDraw = (event) => {
+        if (!ensureTacticalBoardReady()) return;
+        const activeTool = syncTacticalToolFromUI();
+        if (activeTool === 'move') return;
         const activeTool = syncTacticalToolFromUI();
         if (activeTool === 'move') return;
         if (TacticalBoard.tool === 'move') return;
@@ -3623,6 +3648,9 @@ populateHeatmapAthletes();
       };
 
       const startMoveAthlete = (event) => {
+        if (!ensureTacticalBoardReady()) return;
+        const activeTool = syncTacticalToolFromUI();
+        if (activeTool !== 'move') return;
         const activeTool = syncTacticalToolFromUI();
         if (activeTool !== 'move') return;
         if (TacticalBoard.tool !== 'move') return;
