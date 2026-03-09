@@ -1486,7 +1486,7 @@
       }
       if (tabId === 'prancheta') {
         requestAnimationFrame(() => {
-          ensureTacticalBoardReady();
+          refreshTacticalBoardLayout();
         });
       }
     }
@@ -3386,30 +3386,32 @@ populateHeatmapAthletes();
 
     function initTacticalBoard() {
       TacticalBoard.players = TacticalBoard.defaultPlayers.map(p => ({ ...p }));
-      setupTacticalBoardSize();
+      refreshTacticalBoardLayout();
+      bindTacticalEvents();
+      window.addEventListener('resize', () => {
+        refreshTacticalBoardLayout();
+      });
+    }
+
+    function refreshTacticalBoardLayout() {
+      if (!setupTacticalBoardSize()) return false;
       renderTacticalPlayers();
       drawTacticalCourt();
       redrawTacticalDrawings();
-      bindTacticalEvents();
-      window.addEventListener('resize', () => {
-        ensureTacticalBoardReady();
-        setupTacticalBoardSize();
-        drawTacticalCourt();
-        redrawTacticalDrawings();
-        renderTacticalPlayers();
-      });
+      return true;
     }
 
     function setupTacticalBoardSize() {
       const board = document.getElementById('tactical-board');
-      const playersLayer = document.getElementById('tactical-players-layer');
       const courtCanvas = document.getElementById('tactical-court-canvas');
       const drawCanvas = document.getElementById('tactical-draw-canvas');
       const rect = board.getBoundingClientRect();
+      if (!rect.width || !rect.height) return false;
       [courtCanvas, drawCanvas].forEach(c => {
         c.width = rect.width;
         c.height = rect.height;
       });
+      return true;
     }
 
 
@@ -3677,7 +3679,7 @@ populateHeatmapAthletes();
         if (!TacticalBoard.drawingActive) return;
         TacticalBoard.drawingActive = false;
         const canvas = document.getElementById('tactical-draw-canvas');
-        if (TacticalBoard.currentDrawing && TacticalBoard.currentDrawing.points.length > 1) {
+        if (TacticalBoard.currentDrawing && TacticalBoard.currentDrawing.points.length > 1 && canvas.width > 0 && canvas.height > 0) {
           TacticalBoard.drawings.push({
             ...TacticalBoard.currentDrawing,
             points: TacticalBoard.currentDrawing.points.map(p => ({
