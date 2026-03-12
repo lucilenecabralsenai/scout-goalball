@@ -186,6 +186,22 @@
         <div id="bench-players" class="flex flex-wrap gap-2"><!-- Bench players will be shown here -->
         </div>
        </div>
+      </div><div class="bg-white rounded-xl p-5 card-shadow">
+       <h2 class="text-lg font-semibold text-slate-800 mb-4">🔴 Escalação Adversária</h2>
+       <div class="bg-gradient-to-b from-rose-50 to-slate-50 rounded-xl p-4 border-2 border-rose-200 mb-3">
+        <div class="grid grid-cols-3 gap-4 max-w-md mx-auto">
+         <div class="text-center">
+          <div class="w-16 h-16 mx-auto bg-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg mb-2" id="opp-pos-left">-</div><span class="text-xs text-slate-600">Ala Esquerda</span> <select id="select-opp-left" class="w-full mt-1 text-xs p-1 border rounded"><option value="">Selecionar</option></select>
+         </div>
+         <div class="text-center">
+          <div class="w-20 h-20 mx-auto bg-rose-700 rounded-full flex items-center justify-center text-white font-bold text-xl mb-2" id="opp-pos-center">-</div><span class="text-xs text-slate-600">Pivô</span> <select id="select-opp-center" class="w-full mt-1 text-xs p-1 border rounded"><option value="">Selecionar</option></select>
+         </div>
+         <div class="text-center">
+          <div class="w-16 h-16 mx-auto bg-rose-600 rounded-full flex items-center justify-center text-white font-bold text-lg mb-2" id="opp-pos-right">-</div><span class="text-xs text-slate-600">Ala Direita</span> <select id="select-opp-right" class="w-full mt-1 text-xs p-1 border rounded"><option value="">Selecionar</option></select>
+         </div>
+        </div>
+       </div>
+       <p class="text-xs text-slate-500">Configure os três atletas iniciais adversários para melhorar a leitura tática no Jogo, no modal de ataque e na prancheta.</p>
       </div><!-- Substitution -->
       <div class="bg-white rounded-xl p-5 card-shadow">
        <h2 class="text-lg font-semibold text-slate-800 mb-4">🔄 Realizar Substituição</h2>
@@ -762,6 +778,9 @@
         left: null,
         center: null,
         right: null,
+        opponentLeft: null,
+        opponentCenter: null,
+        opponentRight: null,
         phase: '1T',
         phaseStarters: {
           '1T': 'my',
@@ -930,6 +949,10 @@
             'PR': parsed?.lineup?.phaseStarters?.['PR'] || AppState.lineup.phaseStarters['PR'],
             'PN': parsed?.lineup?.phaseStarters?.['PN'] || AppState.lineup.phaseStarters['PN']
           };
+          AppState.lineup.opponentLeft = parsed?.lineup?.opponentLeft ?? AppState.lineup.opponentLeft;
+          AppState.lineup.opponentCenter = parsed?.lineup?.opponentCenter ?? AppState.lineup.opponentCenter;
+          AppState.lineup.opponentRight = parsed?.lineup?.opponentRight ?? AppState.lineup.opponentRight;
+          ensureOpponentLineupDefaults();
           AppState.lineup.possessionTeam = parsed?.lineup?.possessionTeam || AppState.lineup.phaseStarters[AppState.lineup.phase] || 'my';
           AppState.targetPlans = Object.fromEntries(Object.entries(parsed.targetPlans || {}).map(([k,v]) => [k, sanitizeTargets(v)]));
           AppState.currentTargets = Object.fromEntries(Object.entries(parsed.currentTargets || {}).map(([k,v]) => [k, sanitizeTargets(v)]));
@@ -1045,10 +1068,16 @@
           inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
       } else {
-        AppState.config.opponentAthletes.forEach((athlete, idx) => {
-          if (!(athlete.name || athlete.number)) return;
+        const onCourt = [AppState.lineup.opponentLeft, AppState.lineup.opponentCenter, AppState.lineup.opponentRight].filter(v => v !== null);
+        onCourt.forEach(idx => {
+          const athlete = AppState.config.opponentAthletes[idx];
+          if (!athlete) return;
           const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
           outSelect.innerHTML += `<option value="${idx}">${label}</option>`;
+        });
+        AppState.config.opponentAthletes.forEach((athlete, idx) => {
+          if (!(athlete.name || athlete.number) || onCourt.includes(idx)) return;
+          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
           inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
       }
@@ -1602,6 +1631,7 @@
       });
       
       saveToLocalStorage();
+      ensureOpponentLineupDefaults();
       updateLineupSelectors();
       renderTargetPlan();
       showToast('✅ Configuração salva com sucesso!');
@@ -1610,6 +1640,43 @@
     // =====================================================
     // ESCALAÇÃO TAB FUNCTIONS
     // =====================================================
+
+    function getConfiguredOpponentIndices() {
+      return (AppState.config.opponentAthletes || [])
+        .map((athlete, idx) => ((athlete?.name || athlete?.number) ? idx : null))
+        .filter(idx => idx !== null);
+    }
+
+    function ensureOpponentLineupDefaults() {
+      const configured = getConfiguredOpponentIndices();
+      const current = [AppState.lineup.opponentLeft, AppState.lineup.opponentCenter, AppState.lineup.opponentRight];
+      if (current.every(v => v !== null)) return;
+
+      const used = new Set(current.filter(v => v !== null));
+      const nextAvailable = () => configured.find(idx => !used.has(idx));
+
+      if (AppState.lineup.opponentLeft === null) {
+        const idx = nextAvailable();
+        if (idx !== undefined) {
+          AppState.lineup.opponentLeft = idx;
+          used.add(idx);
+        }
+      }
+      if (AppState.lineup.opponentCenter === null) {
+        const idx = nextAvailable();
+        if (idx !== undefined) {
+          AppState.lineup.opponentCenter = idx;
+          used.add(idx);
+        }
+      }
+      if (AppState.lineup.opponentRight === null) {
+        const idx = nextAvailable();
+        if (idx !== undefined) {
+          AppState.lineup.opponentRight = idx;
+          used.add(idx);
+        }
+      }
+    }
     
     function updateLineupSelectors() {
       const athletes = AppState.config.myAthletes.filter(a => a.name || a.number);
@@ -1619,17 +1686,39 @@
         const select = document.getElementById(id);
         if (!select) return;
         
-        const currentValue = select.value;
         select.innerHTML = '<option value="">Selecionar</option>';
         
         athletes.forEach((athlete, idx) => {
           const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
           select.innerHTML += `<option value="${idx}">${display}</option>`;
         });
-        
-        select.value = currentValue;
+      });
+
+      const myMap = { 'select-left': 'left', 'select-center': 'center', 'select-right': 'right' };
+      Object.entries(myMap).forEach(([id, key]) => {
+        const select = document.getElementById(id);
+        const value = AppState.lineup[key];
+        if (select) select.value = value !== null ? String(value) : '';
       });
       
+      ['select-opp-left', 'select-opp-center', 'select-opp-right'].forEach(id => {
+        const select = document.getElementById(id);
+        if (!select) return;
+        select.innerHTML = '<option value="">Selecionar</option>';
+        AppState.config.opponentAthletes.forEach((athlete, idx) => {
+          if (!(athlete.name || athlete.number)) return;
+          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          select.innerHTML += `<option value="${idx}">${display}</option>`;
+        });
+      });
+
+      const oppMap = { 'select-opp-left': 'opponentLeft', 'select-opp-center': 'opponentCenter', 'select-opp-right': 'opponentRight' };
+      Object.entries(oppMap).forEach(([id, key]) => {
+        const select = document.getElementById(id);
+        const value = AppState.lineup[key];
+        if (select) select.value = value !== null ? String(value) : '';
+      });
+
       // Update attack modal selectors
       updateAttackAthleteSelector('my');
     }
@@ -1647,6 +1736,19 @@
         }
       });
       
+      const opponentPositions = [
+        { key: 'opponentLeft', displayId: 'opp-pos-left' },
+        { key: 'opponentCenter', displayId: 'opp-pos-center' },
+        { key: 'opponentRight', displayId: 'opp-pos-right' }
+      ];
+      opponentPositions.forEach(({ key, displayId }) => {
+        const display = document.getElementById(displayId);
+        if (!display) return;
+        const idx = AppState.lineup[key];
+        const athlete = idx !== null ? AppState.config.opponentAthletes[idx] : null;
+        display.textContent = athlete?.number || '-';
+      });
+
       // Update bench
       const benchContainer = document.getElementById('bench-players');
       const onCourt = [AppState.lineup.left, AppState.lineup.center, AppState.lineup.right].filter(x => x !== null);
@@ -1696,6 +1798,19 @@
 
         if (!position) {
           showToast('⚠️ Atleta selecionado não está em quadra');
+          return false;
+        }
+
+        AppState.lineup[position] = parseInt(subInIdx, 10);
+      }
+
+      if (team === 'opponent') {
+        if (AppState.lineup.opponentLeft == subOutIdx) position = 'opponentLeft';
+        else if (AppState.lineup.opponentCenter == subOutIdx) position = 'opponentCenter';
+        else if (AppState.lineup.opponentRight == subOutIdx) position = 'opponentRight';
+
+        if (!position) {
+          showToast('⚠️ Atleta adversário selecionado não está em quadra');
           return false;
         }
 
@@ -2346,8 +2461,12 @@
         });
       }
 
-      return roles.map(({ label }, idx) => {
-        const athlete = AppState.config.opponentAthletes?.[idx] || null;
+      const opponentKeyMap = { left: 'opponentLeft', center: 'opponentCenter', right: 'opponentRight' };
+      const configured = getConfiguredOpponentIndices();
+      const fallbackByRole = { left: configured[0], center: configured[1], right: configured[2] };
+      return roles.map(({ key, label }) => {
+        const idx = AppState.lineup[opponentKeyMap[key]] ?? fallbackByRole[key] ?? null;
+        const athlete = idx !== null ? AppState.config.opponentAthletes?.[idx] : null;
         return `${label} — ${getAthleteLabel(athlete)}`;
       });
     }
@@ -3226,6 +3345,17 @@ function renderHeatmap(optionsOrFilter) {
           updateLineupDisplay();
         });
       });
+
+      const opponentSelectMap = { left: 'opponentLeft', center: 'opponentCenter', right: 'opponentRight' };
+      ['left', 'center', 'right'].forEach(pos => {
+        const el = document.getElementById(`select-opp-${pos}`);
+        if (!el) return;
+        el.addEventListener('change', (e) => {
+          AppState.lineup[opponentSelectMap[pos]] = e.target.value ? parseInt(e.target.value) : null;
+          saveToLocalStorage();
+          updateLineupDisplay();
+        });
+      });
       
       document.getElementById('confirm-sub').addEventListener('click', performSubstitution);
       
@@ -3504,8 +3634,10 @@ populateHeatmapAthletes();
         return baseLabel;
       }
 
-      const opponentAthletes = (AppState.config.opponentAthletes || []).filter(a => a && (a.name || a.number));
-      const athlete = opponentAthletes[{ L: 0, C: 1, R: 2 }[role]];
+      const opponentRoleMap = { L: 'opponentLeft', C: 'opponentCenter', R: 'opponentRight' };
+      const fallbackByRole = { L: getConfiguredOpponentIndices()[0], C: getConfiguredOpponentIndices()[1], R: getConfiguredOpponentIndices()[2] };
+      const opponentIndex = AppState.lineup?.[opponentRoleMap[role]] ?? fallbackByRole[role];
+      const athlete = AppState.config.opponentAthletes?.[opponentIndex];
       const baseLabel = getTeamRoleLabel('opponent', role);
       if (athlete && (athlete.name || athlete.number)) {
         return athlete.number ? `${athlete.number} ${athlete.name || baseLabel}` : (athlete.name || baseLabel);
@@ -4076,6 +4208,7 @@ populateHeatmapAthletes();
       loadFromLocalStorage();
       loadConfigToForm();
       renderAthleteInputs();
+      ensureOpponentLineupDefaults();
       updateLineupSelectors();
       updateLineupDisplay();
       renderTargetPlan();
