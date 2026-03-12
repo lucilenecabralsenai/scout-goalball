@@ -221,7 +221,22 @@
         <div class="sticky top-0 bg-white border-b px-4 py-3 flex items-center justify-between">
          <h3 class="text-lg font-semibold">⚡ Registrar Ataque</h3><button id="close-attack-modal" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">✕</button>
         </div>
-        <div class="p-4 space-y-4"><!-- Team Selection -->
+        <div class="p-4 space-y-4"><div class="sticky top-[56px] z-10 -mx-4 px-4 py-3 border-b border-slate-200 bg-white/95 backdrop-blur-sm space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div class="text-xs uppercase tracking-wide text-slate-500">Consulta rápida</div>
+            <div id="attack-modal-score" class="text-sm font-bold text-slate-800">Placar: 0 - 0</div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-2">
+              <div class="text-xs font-semibold text-blue-800 mb-1">Minha equipe</div>
+              <div id="attack-modal-my-lineup" class="space-y-1 text-xs text-slate-700"></div>
+            </div>
+            <div class="rounded-lg border border-rose-200 bg-rose-50 p-2">
+              <div class="text-xs font-semibold text-rose-800 mb-1">Adversário</div>
+              <div id="attack-modal-opponent-lineup" class="space-y-1 text-xs text-slate-700"></div>
+            </div>
+          </div>
+         </div><!-- Team Selection -->
          <div><label class="block text-sm font-medium text-slate-600 mb-2">Equipe</label>
           <div class="grid grid-cols-2 gap-2"><button class="team-select-btn px-4 py-2 border-2 border-blue-500 bg-blue-50 text-blue-700 rounded-lg font-medium" data-team="my">Minha Equipe</button> <button class="team-select-btn px-4 py-2 border-2 border-slate-300 text-slate-600 rounded-lg font-medium" data-team="opponent">Adversário</button>
           </div>
@@ -1724,6 +1739,7 @@
       saveToLocalStorage();
       updateLineupDisplay();
       renderGameOnCourtSummary();
+      renderAttackModalQuickInfo();
       return true;
     }
 
@@ -1790,6 +1806,7 @@
       saveToLocalStorage();
       updateLineupDisplay();
       renderGameOnCourtSummary();
+      renderAttackModalQuickInfo();
 
       const ok = await registerSubstitution({
         team: 'my',
@@ -1907,6 +1924,7 @@
       updateAttackAthleteSelector(attackState.team);
       const preferredBtn = document.querySelector(`.team-select-btn[data-team="${attackState.team}"]`);
       if (preferredBtn) preferredBtn.click();
+      renderAttackModalQuickInfo();
     }
     
     function closeAttackModal() {
@@ -2008,6 +2026,7 @@
           showToast('⚠️ Lance salvo localmente (modo offline)');
           prepareAttackForNextRegister();
           updateScore();
+          renderAttackModalQuickInfo();
           return;
         }
       } else {
@@ -2018,6 +2037,7 @@
       prepareAttackForNextRegister();
       showToast('✅ Lance registrado!');
       updateScore();
+      renderAttackModalQuickInfo();
     }
     
 
@@ -2304,6 +2324,49 @@
       }).join('');
     }
 
+
+    function getAthleteLabel(athlete) {
+      const number = athlete?.number ? `#${athlete.number}` : '#-';
+      const name = athlete?.name ? ` ${athlete.name}` : '';
+      return `${number}${name}`;
+    }
+
+    function getTeamFormationRows(team) {
+      const roles = [
+        { key: 'left', label: 'Ala E' },
+        { key: 'center', label: 'Pivô' },
+        { key: 'right', label: 'Ala D' }
+      ];
+
+      if (team === 'my') {
+        return roles.map(({ key, label }) => {
+          const idx = AppState.lineup[key];
+          const athlete = idx !== null ? AppState.config.myAthletes[idx] : null;
+          return `${label} — ${getAthleteLabel(athlete)}`;
+        });
+      }
+
+      return roles.map(({ label }, idx) => {
+        const athlete = AppState.config.opponentAthletes?.[idx] || null;
+        return `${label} — ${getAthleteLabel(athlete)}`;
+      });
+    }
+
+    function renderAttackModalQuickInfo() {
+      const score = getScoreForMatch(AppState.matchId);
+      const scoreEl = document.getElementById('attack-modal-score');
+      const myEl = document.getElementById('attack-modal-my-lineup');
+      const oppEl = document.getElementById('attack-modal-opponent-lineup');
+      if (!scoreEl || !myEl || !oppEl) return;
+
+      scoreEl.textContent = `Placar: ${score.myGoals} - ${score.oppGoals}`;
+
+      const myRows = getTeamFormationRows('my');
+      const oppRows = getTeamFormationRows('opponent');
+      myEl.innerHTML = myRows.map(row => `<div>${row}</div>`).join('');
+      oppEl.innerHTML = oppRows.map(row => `<div>${row}</div>`).join('');
+    }
+
     function prepareAttackForNextRegister() {
       const team = AppState.lineup.possessionTeam || 'my';
       resetAttackState();
@@ -2359,6 +2422,7 @@
       
       updateScore();
       renderGameOnCourtSummary();
+      renderAttackModalQuickInfo();
     }
     
     // =====================================================
