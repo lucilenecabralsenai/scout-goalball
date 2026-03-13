@@ -1511,16 +1511,17 @@
         <div class="card"><h3>Gols adversário</h3><div class="metric">${oppGoals}</div></div>
         <div class="card"><h3>Eficiência ofensiva</h3><div class="metric">${formatPct(myGoals, myShots.length)}</div></div>
         <div class="card"><h3>Eficiência defensiva</h3><div class="metric">${formatPct(myDefenses, oppShots.length)}</div></div>
-        <div class="card"><h3>Penalidades (minha/adversário)</h3><div class="metric">${myPenalties} / ${oppPenalties}</div></div>
+        <div class="card"><h3>Penalidades minha equipe</h3><div class="metric">${myPenalties}</div></div>
+        <div class="card"><h3>Penalidades adversário</h3><div class="metric">${oppPenalties}</div></div>
         <div class="card"><h3>Ball over</h3><div class="metric">${ballOverCount}</div></div>
         <div class="card"><h3>Fora</h3><div class="metric">${outCount}</div></div>
-        <div class="card"><h3>Pressão ofensiva (minha equipe)</h3><div class="metric">${formatPressure(myShots.length, myGoals)}</div></div>
-        <div class="card"><h3>Pressão ofensiva (adversário)</h3><div class="metric">${formatPressure(oppShots.length, oppGoals)}</div></div>
+        <div class="card"><h3>Ataques p/ 1 gol (minha equipe)</h3><div class="metric">${formatPressure(myShots.length, myGoals)}</div></div>
+        <div class="card"><h3>Ataques p/ 1 gol (adversário)</h3><div class="metric">${formatPressure(oppShots.length, oppGoals)}</div></div>
       </div>
     </section>
 
     <section class="section">
-      <h2 class="section-title">Estatísticas ofensivas minha equipe</h2>
+      <h2 class="section-title">3. Estatísticas ofensivas minha equipe</h2>
       <table>
         <thead><tr><th>Atleta</th><th>Arr.</th><th>Gols</th><th>Def.</th><th>Pen.</th><th>% Aprov.</th><th>% Plano</th></tr></thead>
         <tbody>${attackRows}</tbody>
@@ -1533,7 +1534,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Estatísticas ofensivas adversário</h2>
+      <h2 class="section-title">4. Análise ofensiva individual – adversário</h2>
       <table>
         <thead><tr><th>Atleta</th><th>Arremessos</th><th>Gols</th><th>Defendidas</th><th>Aproveitamento (%)</th></tr></thead>
         <tbody>${opponentIndividualRows}</tbody>
@@ -1541,7 +1542,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Eficiência por zona de ataque</h2>
+      <h2 class="section-title">5. Eficiência por zona de ataque</h2>
       <table>
         <thead><tr><th>Zona</th><th>Arremessos</th><th>Gols</th><th>Aproveitamento %</th></tr></thead>
         <tbody>${getZoneEfficiencyRows(events, 'my')}</tbody>
@@ -1549,7 +1550,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Eficiência por tipo de bola</h2>
+      <h2 class="section-title">6. Eficiência por tipo de bola</h2>
       <table>
         <thead><tr><th>Tipo de bola</th><th>Arremessos</th><th>Gols</th><th>Aproveitamento %</th></tr></thead>
         <tbody>${getBallTypeEfficiencyRows(events, 'my')}</tbody>
@@ -1557,7 +1558,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Análise por sistema ofensivo</h2>
+      <h2 class="section-title">7. Análise por sistema ofensivo</h2>
       <table>
         <thead><tr><th>Situação</th><th>Ataques</th><th>Gols</th><th>Aproveitamento</th><th>Alvo mais usado</th><th>Atleta mais usado</th></tr></thead>
         <tbody>${getSystemEfficiencyRows(events, 'my')}</tbody>
@@ -1565,7 +1566,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Top jogadores da partida</h2>
+      <h2 class="section-title">8. Top jogadores da partida</h2>
       <div class="grid grid-2">
         <div class="card"><h3>Mais gols</h3><div>${topGoals ? `${escapeHtml(topGoals.label)} (${topGoals.goals})` : '-'}</div></div>
         <div class="card"><h3>Mais arremessos</h3><div>${topShots ? `${escapeHtml(topShots.label)} (${topShots.shots})` : '-'}</div></div>
@@ -1574,7 +1575,7 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Tendências do adversário</h2>
+      <h2 class="section-title">9. Tendências do adversário</h2>
       <div class="grid grid-2">
         <div class="card"><h3>Zona mais atacada</h3><div>${escapeHtml(Object.entries(oppZoneCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || '-')}</div></div>
         <div class="card"><h3>Tipo de bola mais usado</h3><div>${escapeHtml(ballTypeLabels[Object.entries(oppBallTypeCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]] || '-')}</div></div>
@@ -1583,13 +1584,13 @@
     </section>
 
     <section class="section page-break">
-      <h2 class="section-title">Heatmap</h2>
+      <h2 class="section-title">10. Heatmap</h2>
       <div class="heatmap-box" id="pdf-heatmap">${heatmapSvg}</div>
       <div class="legend">Mapa exportado com os filtros ativos no momento da geração do PDF.</div>
     </section>
 
     <section class="section">
-      <h2 class="section-title">Últimos lances</h2>
+      <h2 class="section-title">11. Últimos lances</h2>
       <table>
         <thead><tr><th>Horário</th><th>Fase</th><th>Equipe</th><th>Atleta</th><th>Tipo bola</th><th>Alvo</th><th>Sistema</th><th>Resultado</th></tr></thead>
         <tbody>${latestRows}</tbody>
