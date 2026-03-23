@@ -1011,6 +1011,57 @@
       return duplicates;
     }
 
+    function isAthleteEmpty(athlete = {}) {
+      return !String(athlete.name || '').trim()
+        && !String(athlete.number || '').trim()
+        && !String(athlete.role || '').trim()
+        && !String(athlete.notes || '').trim();
+    }
+
+    function hasAthleteIdentity(athlete = {}) {
+      return Boolean(String(athlete.name || '').trim() || String(athlete.number || '').trim());
+    }
+
+    function formatAthleteDisplay(athlete = {}, options = {}) {
+      const { withHash = true, fallback = 'Atleta não identificado', pendingName = 'nome pendente', pendingNumber = 'sem nº' } = options;
+      const number = String(athlete.number || '').trim();
+      const name = String(athlete.name || '').trim();
+      if (number && name) return `${withHash ? '#' : ''}${number} — ${name}`;
+      if (number) return `${withHash ? '#' : ''}${number} — ${pendingName}`;
+      if (name) return `${name} — ${pendingNumber}`;
+      return fallback;
+    }
+
+    function getTeamAthleteValidation(athletes = []) {
+      const duplicates = sanitizeDuplicateNumbers(athletes.filter(hasAthleteIdentity));
+      const duplicateIndexSet = new Set();
+      duplicates.forEach(({ firstIndex, secondIndex }) => {
+        duplicateIndexSet.add(firstIndex);
+        duplicateIndexSet.add(secondIndex);
+      });
+      return athletes.map((athlete, index) => {
+        if (isAthleteEmpty(athlete)) {
+          return { valid: true, empty: true, duplicate: false, missingIdentity: false };
+        }
+        const missingIdentity = !hasAthleteIdentity(athlete);
+        const duplicate = duplicateIndexSet.has(index) && Boolean(String(athlete.number || '').trim());
+        return {
+          valid: !missingIdentity && !duplicate,
+          empty: false,
+          duplicate,
+          missingIdentity
+        };
+      });
+    }
+
+    function setInputInvalidState(input, invalid) {
+      if (!input) return;
+      input.classList.toggle('border-red-400', invalid);
+      input.classList.toggle('bg-red-50', invalid);
+      input.classList.toggle('text-red-700', invalid);
+      input.classList.toggle('focus:ring-red-500', invalid);
+    }
+
     function syncTeamMetaLabels() {
       const myMeta = document.getElementById('my-team-meta');
       const oppMeta = document.getElementById('opponent-team-meta');
@@ -1818,12 +1869,12 @@
         onCourt.forEach(idx => {
           const athlete = AppState.config.myAthletes[idx];
           if (!athlete) return;
-          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          const label = formatAthleteDisplay(athlete, { withHash: false, fallback: `Atleta ${idx + 1}` });
           outSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
         AppState.config.myAthletes.forEach((athlete, idx) => {
           if (!(athlete.name || athlete.number) || onCourt.includes(idx)) return;
-          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          const label = formatAthleteDisplay(athlete, { withHash: false, fallback: `Atleta ${idx + 1}` });
           inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
       } else {
@@ -1831,12 +1882,12 @@
         onCourt.forEach(idx => {
           const athlete = AppState.config.opponentAthletes[idx];
           if (!athlete) return;
-          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          const label = formatAthleteDisplay(athlete, { withHash: false, fallback: `Atleta ${idx + 1}` });
           outSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
         AppState.config.opponentAthletes.forEach((athlete, idx) => {
           if (!(athlete.name || athlete.number) || onCourt.includes(idx)) return;
-          const label = athlete.number ? `${athlete.number} - ${athlete.name}` : (athlete.name || `Atleta ${idx + 1}`);
+          const label = formatAthleteDisplay(athlete, { withHash: false, fallback: `Atleta ${idx + 1}` });
           inSelect.innerHTML += `<option value="${idx}">${label}</option>`;
         });
       }
@@ -2526,6 +2577,30 @@
       }
       opponentContainer.innerHTML = opponentHTML;
       syncTeamMetaLabels();
+      updateConfigAthleteValidationHighlights();
+    }
+
+    function updateConfigAthleteValidationHighlights() {
+      const groups = [
+        { nameSelector: '.my-athlete-name', numberSelector: '.my-athlete-number' },
+        { nameSelector: '.opp-athlete-name', numberSelector: '.opp-athlete-number' }
+      ];
+      groups.forEach(({ nameSelector, numberSelector }) => {
+        const names = Array.from(document.querySelectorAll(nameSelector));
+        const numbers = Array.from(document.querySelectorAll(numberSelector));
+        const athletes = names.map((input, index) => ({
+          name: input.value,
+          number: numbers[index]?.value || ''
+        })).filter(athlete => athlete.name || athlete.number);
+        const duplicates = sanitizeDuplicateNumbers(athletes);
+        const duplicateNumbers = new Set(duplicates.map(item => item.number));
+        names.forEach((input, index) => {
+          const numberInput = numbers[index];
+          const currentNumber = String(numberInput?.value || '').trim();
+          setInputInvalidState(input, false);
+          setInputInvalidState(numberInput, duplicateNumbers.has(currentNumber));
+        });
+      });
     }
 
     function renderSavedTeamSelectors() {
@@ -2594,7 +2669,7 @@
             </div>
             <div class="mt-3 flex flex-wrap gap-2">
               ${team.athletes.length
-                ? team.athletes.map(athlete => `<span class="px-3 py-1 bg-slate-50 rounded-full text-xs border border-slate-200">${escapeHtml(`${athlete.number || 's/n'} - ${athlete.name || 'Sem nome'}`)}</span>`).join('')
+                ? team.athletes.map(athlete => `<span class="px-3 py-1 bg-slate-50 rounded-full text-xs border border-slate-200">${escapeHtml(formatAthleteDisplay(athlete))}</span>`).join('')
                 : '<span class="text-xs text-slate-400">Sem atletas cadastrados.</span>'}
             </div>
           </div>
@@ -2610,27 +2685,68 @@
       document.getElementById('team-form-category').value = teamEditorState.category || '';
       document.getElementById('delete-team-btn').classList.toggle('hidden', !teamEditorState.id);
       const warning = document.getElementById('team-form-duplicate-warning');
-      const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes);
-      if (duplicates.length) {
-        warning.textContent = `Números duplicados encontrados: ${duplicates.map(d => d.number).join(', ')}.`;
+      const validation = getTeamAthleteValidation(teamEditorState.athletes);
+      const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes.filter(hasAthleteIdentity));
+      const missingIdentityRows = validation
+        .map((item, index) => item.missingIdentity ? index + 1 : null)
+        .filter(Boolean);
+      if (duplicates.length || missingIdentityRows.length) {
+        const messages = [];
+        if (duplicates.length) messages.push(`Números duplicados: ${duplicates.map(d => d.number).join(', ')}`);
+        if (missingIdentityRows.length) messages.push(`Preencha nome ou número nos atletas ${missingIdentityRows.join(', ')}`);
+        warning.textContent = messages.join(' • ');
         warning.classList.remove('hidden');
       } else {
         warning.classList.add('hidden');
       }
       const list = document.getElementById('team-athletes-form-list');
       list.innerHTML = (teamEditorState.athletes.length ? teamEditorState.athletes : [createEmptyAthleteDraft()]).map((athlete, index) => `
-        <div class="border border-slate-200 rounded-xl p-3" data-athlete-row="${index}">
+        <div class="border rounded-xl p-3 ${validation[index]?.valid ? 'border-slate-200' : 'border-red-300 bg-red-50/40'}" data-athlete-row="${index}">
           <div class="grid grid-cols-1 md:grid-cols-[1.5fr_100px_1fr] gap-3 mb-3">
-            <input type="text" class="team-athlete-name px-3 py-2 border border-slate-300 rounded-lg" placeholder="Nome do atleta" value="${escapeAttribute(athlete.name)}" data-index="${index}">
-            <input type="text" class="team-athlete-number px-3 py-2 border border-slate-300 rounded-lg text-center" placeholder="Nº" value="${escapeAttribute(athlete.number)}" data-index="${index}">
-            <input type="text" class="team-athlete-role px-3 py-2 border border-slate-300 rounded-lg" placeholder="Posição/função" value="${escapeAttribute(athlete.role)}" data-index="${index}">
+            <input type="text" class="team-athlete-name px-3 py-2 border rounded-lg ${validation[index]?.missingIdentity ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-300'}" placeholder="Nome do atleta" value="${escapeAttribute(athlete.name)}" data-index="${index}">
+            <input type="text" class="team-athlete-number px-3 py-2 border rounded-lg text-center ${validation[index]?.duplicate ? 'border-red-400 bg-red-50 text-red-700' : 'border-slate-300'}" placeholder="Nº" value="${escapeAttribute(athlete.number)}" data-index="${index}">
+            <input type="text" class="team-athlete-role px-3 py-2 border rounded-lg ${validation[index]?.missingIdentity ? 'border-red-200 bg-red-50/60' : 'border-slate-300'}" placeholder="Posição/função" value="${escapeAttribute(athlete.role)}" data-index="${index}">
           </div>
           <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
-            <textarea class="team-athlete-notes px-3 py-2 border border-slate-300 rounded-lg" rows="2" placeholder="Observação opcional" data-index="${index}">${escapeHtml(athlete.notes)}</textarea>
+            <textarea class="team-athlete-notes px-3 py-2 border rounded-lg ${validation[index]?.missingIdentity ? 'border-red-200 bg-red-50/60' : 'border-slate-300'}" rows="2" placeholder="Observação opcional" data-index="${index}">${escapeHtml(athlete.notes)}</textarea>
             <button class="remove-team-athlete self-start px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm" data-index="${index}">Remover</button>
           </div>
+          ${validation[index]?.missingIdentity ? '<p class="mt-2 text-xs text-red-700">Esse atleta precisa ter pelo menos nome ou número para ser salvo.</p>' : ''}
+          ${validation[index]?.duplicate ? '<p class="mt-2 text-xs text-red-700">Este número já está em uso nesta equipe.</p>' : ''}
         </div>
       `).join('');
+    }
+
+    function refreshTeamEditorValidationFromDom() {
+      const draft = collectTeamEditorData();
+      teamEditorState = { ...draft, athletes: draft.athletes.length ? draft.athletes : [createEmptyAthleteDraft()] };
+      const validation = getTeamAthleteValidation(teamEditorState.athletes);
+      const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes.filter(hasAthleteIdentity));
+      const missingIdentityRows = validation
+        .map((item, index) => item.missingIdentity ? index + 1 : null)
+        .filter(Boolean);
+      const warning = document.getElementById('team-form-duplicate-warning');
+      if (duplicates.length || missingIdentityRows.length) {
+        const messages = [];
+        if (duplicates.length) messages.push(`Números duplicados: ${duplicates.map(d => d.number).join(', ')}`);
+        if (missingIdentityRows.length) messages.push(`Preencha nome ou número nos atletas ${missingIdentityRows.join(', ')}`);
+        warning.textContent = messages.join(' • ');
+        warning.classList.remove('hidden');
+      } else {
+        warning.classList.add('hidden');
+      }
+
+      const rows = Array.from(document.querySelectorAll('#team-athletes-form-list [data-athlete-row]'));
+      rows.forEach((row, index) => {
+        const state = validation[index] || { valid: true, duplicate: false, missingIdentity: false };
+        row.classList.toggle('border-red-300', !state.valid);
+        row.classList.toggle('bg-red-50/40', !state.valid);
+        row.classList.toggle('border-slate-200', state.valid);
+        setInputInvalidState(row.querySelector('.team-athlete-name'), state.missingIdentity);
+        setInputInvalidState(row.querySelector('.team-athlete-number'), state.duplicate);
+        setInputInvalidState(row.querySelector('.team-athlete-role'), state.missingIdentity);
+        setInputInvalidState(row.querySelector('.team-athlete-notes'), state.missingIdentity);
+      });
     }
 
     function resetTeamEditor() {
@@ -2658,7 +2774,7 @@
         number: row.querySelector('.team-athlete-number')?.value || '',
         role: row.querySelector('.team-athlete-role')?.value || '',
         notes: row.querySelector('.team-athlete-notes')?.value || ''
-      })).filter(athlete => athlete.name || athlete.number || athlete.role || athlete.notes);
+      })).filter(athlete => !isAthleteEmpty(athlete));
       return normalizeTeam({
         id: teamEditorState.id,
         createdAt: getSavedTeamById(teamEditorState.id)?.createdAt,
@@ -2719,12 +2835,14 @@
 
       const myDuplicates = sanitizeDuplicateNumbers(AppState.config.myAthletes.filter(a => a.name || a.number));
       if (myDuplicates.length) {
+        updateConfigAthleteValidationHighlights();
         showToast(`⚠️ Números duplicados na minha equipe: ${myDuplicates.map(d => d.number).join(', ')}`);
         return;
       }
 
       const oppDuplicates = sanitizeDuplicateNumbers(AppState.config.opponentAthletes.filter(a => a.name || a.number));
       if (oppDuplicates.length) {
+        updateConfigAthleteValidationHighlights();
         showToast(`⚠️ Números duplicados no adversário: ${oppDuplicates.map(d => d.number).join(', ')}`);
         return;
       }
@@ -2744,10 +2862,15 @@
         showToast('⚠️ Informe o nome da equipe.');
         return;
       }
-      const duplicates = sanitizeDuplicateNumbers(team.athletes);
-      if (duplicates.length) {
+      const validation = getTeamAthleteValidation(team.athletes);
+      const duplicates = sanitizeDuplicateNumbers(team.athletes.filter(hasAthleteIdentity));
+      const hasInvalidIdentity = validation.some(item => item.missingIdentity);
+      if (hasInvalidIdentity || duplicates.length) {
         renderTeamEditor();
-        showToast(`⚠️ Corrija os números duplicados: ${duplicates.map(d => d.number).join(', ')}`);
+        const errors = [];
+        if (hasInvalidIdentity) errors.push('preencha nome ou número dos atletas destacados');
+        if (duplicates.length) errors.push(`corrija os números duplicados: ${duplicates.map(d => d.number).join(', ')}`);
+        showToast(`⚠️ Antes de salvar, ${errors.join(' e ')}.`);
         return;
       }
 
@@ -2851,7 +2974,7 @@
         select.innerHTML = '<option value="">Selecionar</option>';
         
         athletes.forEach((athlete, idx) => {
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           select.innerHTML += `<option value="${idx}">${display}</option>`;
         });
       });
@@ -2869,7 +2992,7 @@
         select.innerHTML = '<option value="">Selecionar</option>';
         AppState.config.opponentAthletes.forEach((athlete, idx) => {
           if (!(athlete.name || athlete.number)) return;
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           select.innerHTML += `<option value="${idx}">${display}</option>`;
         });
       });
@@ -2892,9 +3015,11 @@
         const idx = AppState.lineup[pos];
         if (idx !== null && AppState.config.myAthletes[idx]) {
           const athlete = AppState.config.myAthletes[idx];
-          display.textContent = athlete.number || '-';
+          display.textContent = athlete.number || '•';
+          display.title = formatAthleteDisplay(athlete);
         } else {
           display.textContent = '-';
+          display.title = '';
         }
       });
       
@@ -2908,7 +3033,8 @@
         if (!display) return;
         const idx = AppState.lineup[key];
         const athlete = idx !== null ? AppState.config.opponentAthletes[idx] : null;
-        display.textContent = athlete?.number || '-';
+        display.textContent = athlete?.number || '•';
+        display.title = athlete ? formatAthleteDisplay(athlete) : '';
       });
 
       // Update bench
@@ -2920,7 +3046,7 @@
         benchContainer.innerHTML = '<span class="text-slate-400 text-sm">Nenhum reserva disponível</span>';
       } else {
         benchContainer.innerHTML = benchPlayers.map(a => `
-          <span class="px-3 py-1 bg-white rounded-full text-sm border">${a.number || '?'} - ${a.name || 'Sem nome'}</span>
+          <span class="px-3 py-1 bg-white rounded-full text-sm border">${escapeHtml(formatAthleteDisplay(a))}</span>
         `).join('');
       }
       
@@ -2929,7 +3055,7 @@
       subIn.innerHTML = '<option value="">Selecionar atleta</option>';
       AppState.config.myAthletes.forEach((athlete, idx) => {
         if ((athlete.name || athlete.number) && !onCourt.includes(idx)) {
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           subIn.innerHTML += `<option value="${idx}">${display}</option>`;
         }
       });
@@ -2940,7 +3066,7 @@
       onCourt.forEach(idx => {
         const athlete = AppState.config.myAthletes[idx];
         if (athlete) {
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           subOut.innerHTML += `<option value="${idx}">${display}</option>`;
         }
       });
@@ -3151,8 +3277,8 @@
         return `
           <div class="border rounded-lg p-3">
             <div class="flex items-center gap-2 mb-2">
-              <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">${athlete.number || '?'}</span>
-              <span class="font-medium">${athlete.name || 'Sem nome'}</span>
+              <span class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">${athlete.number || '•'}</span>
+              <span class="font-medium">${escapeHtml(formatAthleteDisplay(athlete))}</span>
             </div>
             <div class="flex flex-wrap gap-1">
               ${targets.map(t => `
@@ -3202,9 +3328,9 @@
       const athleteBtns = roleKeys.map(r => {
         const idx = AppState.lineup[r.key];
         const a = (idx !== null && idx !== undefined) ? athletes[idx] : null;
-        const num = a?.number ? `#${a.number}` : '#-';
+        const num = a?.number ? `#${a.number}` : '•';
         const active = String(idx) === String(attackState.athlete) ? 'active' : '';
-        return `<button class="quick-btn court-athlete-btn w-full border-2 border-slate-300 rounded-lg p-2 text-left ${active}" data-athlete="${idx ?? ''}" title="${a?.name || ''}"><div class="font-bold">${num}</div><div class="text-xs text-slate-500">${r.label} ${a?.name || ''}</div></button>`;
+        return `<button class="quick-btn court-athlete-btn w-full border-2 border-slate-300 rounded-lg p-2 text-left ${active}" data-athlete="${idx ?? ''}" title="${escapeAttribute(a ? formatAthleteDisplay(a) : '')}"><div class="font-bold">${num}</div><div class="text-xs text-slate-500">${r.label} ${escapeHtml(a ? formatAthleteDisplay(a, { withHash: false, fallback: 'não definido' }) : 'não definido')}</div></button>`;
       }).join('');
       const targetBtns = OFFICIAL_TARGETS.map(t => `<button class="quick-btn court-target-btn border-2 border-slate-300 rounded-lg py-2 text-xs ${attackState.target===t?'active':''}" data-target="${t}">${t}</button>`).join('');
       container.innerHTML = `<div class="grid grid-cols-[1fr_72px_1fr] gap-2 items-start"><div class="court-col space-y-2 order-${sideA==='left'?'1':'3'}"><div class="text-xs text-slate-500">Arremessador</div>${athleteBtns}</div><div class="order-2 rounded-xl border border-slate-200 bg-white p-2 text-center text-xs text-slate-500">Mini quadra</div><div class="court-col order-${sideB==='right'?'3':'1'}"><div class="text-xs text-slate-500 mb-2">Alvo</div><div class="grid grid-cols-3 gap-1">${targetBtns}</div></div></div>`;
@@ -3257,7 +3383,7 @@
       const athletes = team === 'my' ? AppState.config.myAthletes : AppState.config.opponentAthletes;
       athletes.forEach((athlete, idx) => {
         if (athlete.name || athlete.number) {
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           select.innerHTML += `<option value="${idx}">${display}</option>`;
           pSelect.innerHTML += `<option value="${idx}">${display}</option>`;
         }
@@ -3475,7 +3601,7 @@
 
       const lastEvents = attackEvents.slice(-4).reverse();
       document.getElementById('timeout-last-events').innerHTML = lastEvents.length
-        ? lastEvents.map(event => `<div class="p-2 rounded border ${event.team === 'my' ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}">${new Date(event.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit', minute:'2-digit'})} • ${getTeamLabel(event.team)} • ${event.athleteNumber || '?'} ${event.athleteName || ''} • ${formatEventDetailLine(event)}</div>`).join('')
+        ? lastEvents.map(event => `<div class="p-2 rounded border ${event.team === 'my' ? 'bg-blue-50 border-blue-100' : 'bg-rose-50 border-rose-100'}">${new Date(event.timestamp).toLocaleTimeString('pt-BR',{hour:'2-digit', minute:'2-digit'})} • ${getTeamLabel(event.team)} • ${escapeHtml(formatAthleteDisplay({ number: event.athleteNumber, name: event.athleteName }))} • ${formatEventDetailLine(event)}</div>`).join('')
         : '<p class="text-slate-500">Sem lances registrados até o momento.</p>';
 
       document.getElementById('timeout-court-container').innerHTML = buildTimeoutCourt(attackEvents);
@@ -3496,7 +3622,7 @@
       select.innerHTML = '<option value="">Selecionar atleta</option>';
       AppState.config.myAthletes.forEach((athlete, idx) => {
         if (athlete.name || athlete.number) {
-          const display = athlete.number ? `${athlete.number} - ${athlete.name}` : athlete.name;
+          const display = formatAthleteDisplay(athlete, { withHash: false });
           select.innerHTML += `<option value="${idx}">${display}</option>`;
         }
       });
@@ -3587,17 +3713,15 @@
       container.innerHTML = roles.map(({ key, label }) => {
         const idx = AppState.lineup[key];
         const athlete = idx !== null ? AppState.config.myAthletes[idx] : null;
-        const number = athlete?.number ? `#${athlete.number}` : '#-';
-        const name = athlete?.name || 'Sem atleta';
+        const number = athlete?.number ? `#${athlete.number}` : '•';
+        const name = athlete ? formatAthleteDisplay(athlete, { withHash: false, fallback: 'não definido' }) : 'não definido';
         return `<div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-500">${label}</div><div class="font-semibold text-slate-800">${number} <span class="text-slate-600 font-medium">${name}</span></div></div>`;
       }).join('');
     }
 
 
     function getAthleteLabel(athlete) {
-      const number = athlete?.number ? `#${athlete.number}` : '#-';
-      const name = athlete?.name ? ` ${athlete.name}` : '';
-      return `${number}${name}`;
+      return formatAthleteDisplay(athlete);
     }
 
     function getTeamFormationRows(team) {
@@ -4520,16 +4644,7 @@ function renderHeatmap(optionsOrFilter) {
       });
 
       document.getElementById('team-athletes-form-list').addEventListener('input', () => {
-        const draft = collectTeamEditorData();
-        teamEditorState = { ...draft, athletes: draft.athletes.length ? draft.athletes : [createEmptyAthleteDraft()] };
-        const warning = document.getElementById('team-form-duplicate-warning');
-        const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes);
-        if (duplicates.length) {
-          warning.textContent = `Números duplicados encontrados: ${duplicates.map(d => d.number).join(', ')}.`;
-          warning.classList.remove('hidden');
-        } else {
-          warning.classList.add('hidden');
-        }
+        refreshTeamEditorValidationFromDom();
       });
 
       ['team-form-name', 'team-form-location', 'team-form-category'].forEach(id => {
@@ -4539,6 +4654,11 @@ function renderHeatmap(optionsOrFilter) {
       });
       
       document.getElementById('save-config').addEventListener('click', saveConfig);
+      document.addEventListener('input', (e) => {
+        if (e.target.closest('.my-athlete-name, .my-athlete-number, .opp-athlete-name, .opp-athlete-number')) {
+          updateConfigAthleteValidationHighlights();
+        }
+      });
       
       // Escalação tab
       document.querySelectorAll('.phase-btn').forEach(btn => {
@@ -4857,7 +4977,7 @@ populateHeatmapAthletes();
         const athlete = AppState.config.myAthletes?.[lineupIndex];
         const baseLabel = getTeamRoleLabel('my', role);
         if (athlete && (athlete.name || athlete.number)) {
-          return athlete.number ? `${athlete.number} ${athlete.name || baseLabel}` : (athlete.name || baseLabel);
+          return formatAthleteDisplay(athlete);
         }
         return baseLabel;
       }
@@ -4868,7 +4988,7 @@ populateHeatmapAthletes();
       const athlete = AppState.config.opponentAthletes?.[opponentIndex];
       const baseLabel = getTeamRoleLabel('opponent', role);
       if (athlete && (athlete.name || athlete.number)) {
-        return athlete.number ? `${athlete.number} ${athlete.name || baseLabel}` : (athlete.name || baseLabel);
+        return formatAthleteDisplay(athlete);
       }
       return baseLabel;
     }
