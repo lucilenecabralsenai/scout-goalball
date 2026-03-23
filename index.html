@@ -150,8 +150,14 @@
       </div>
       <div class="bg-white rounded-xl p-5 card-shadow">
        <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><span class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">🟢</span> Minha Equipe</h2>
-       <div class="mb-4"><label class="block text-sm font-medium text-slate-600 mb-1">Nome da Equipe</label> <input type="text" id="config-my-team" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nome da minha equipe">
+       <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4">
+        <div><label class="block text-sm font-medium text-slate-600 mb-1">Equipe salva</label> <select id="saved-my-team-select" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="">Selecionar equipe salva</option></select>
+        </div>
+        <div class="flex items-end"><button id="clear-my-team-selection" class="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Limpar seleção</button></div>
        </div>
+       <div class="mb-4"><label class="block text-sm font-medium text-slate-600 mb-1">Nome da Equipe</label> <input type="text" id="config-my-team" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nome da minha equipe">
+        </div>
+       <p id="my-team-meta" class="text-xs text-slate-500 mb-3"></p>
        <div class="space-y-3" id="my-team-athletes"><!-- Athletes will be rendered here -->
        </div>
       </div>
@@ -160,9 +166,47 @@
         <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2"><span class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">🔴</span> Equipe Adversária</h2><label class="flex items-center gap-2 cursor-pointer"> <span class="text-sm text-slate-600">Cadastrar</span> <input type="checkbox" id="opponent-toggle" class="w-10 h-5 rounded-full appearance-none bg-slate-300 checked:bg-blue-500 transition-colors cursor-pointer relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:transition-transform checked:after:translate-x-5"> </label>
        </div>
        <div id="opponent-section" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4">
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Equipe salva</label> <select id="saved-opponent-team-select" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"><option value="">Selecionar equipe salva</option></select>
+         </div>
+         <div class="flex items-end"><button id="clear-opponent-team-selection" class="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Limpar seleção</button></div>
+        </div>
         <div class="mb-4"><label class="block text-sm font-medium text-slate-600 mb-1">Nome da Equipe</label> <input type="text" id="config-opponent-team" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Nome do adversário">
         </div>
+        <p id="opponent-team-meta" class="text-xs text-slate-500 mb-3"></p>
         <div class="space-y-3" id="opponent-athletes"><!-- Opponent athletes will be rendered here -->
+        </div>
+       </div>
+      </div>
+      <div class="bg-white rounded-xl p-5 card-shadow">
+       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div>
+         <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2"><span class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">📚</span> Cadastro de Equipes</h2>
+         <p class="text-sm text-slate-500">Gerencie equipes permanentes e reutilize seus atletas em futuras partidas.</p>
+        </div>
+        <button id="new-team-btn" class="px-4 py-2 rounded-lg btn-primary text-white text-sm font-medium">+ Nova equipe</button>
+       </div>
+       <div id="teams-empty-state" class="hidden text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4 mb-4">Nenhuma equipe cadastrada ainda.</div>
+       <div id="teams-management-list" class="space-y-3 mb-5"></div>
+       <div class="border-t border-slate-200 pt-5">
+        <div class="flex items-center justify-between gap-3 mb-4">
+         <h3 id="team-editor-title" class="text-base font-semibold text-slate-800">Nova equipe</h3>
+         <button id="cancel-team-edit" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Cancelar edição</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+         <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">Nome da equipe</label><input id="team-form-name" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Ex.: APEC Campinas"></div>
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Categoria</label><input id="team-form-category" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
+         <div class="md:col-span-3"><label class="block text-sm font-medium text-slate-600 mb-1">Cidade/Estado</label><input id="team-form-location" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
+        </div>
+        <div class="flex items-center justify-between gap-3 mb-3">
+         <h4 class="font-medium text-slate-700">Atletas</h4>
+         <button id="add-team-athlete" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm">+ Adicionar atleta</button>
+        </div>
+        <div id="team-form-duplicate-warning" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"></div>
+        <div id="team-athletes-form-list" class="space-y-3"></div>
+        <div class="flex flex-col md:flex-row gap-3 mt-5">
+         <button id="save-team-btn" class="flex-1 btn-success text-white py-3 rounded-xl font-semibold">💾 Salvar equipe</button>
+         <button id="delete-team-btn" class="flex-1 btn-danger text-white py-3 rounded-xl font-semibold hidden">🗑️ Excluir equipe</button>
         </div>
        </div>
       </div><button id="save-config" class="w-full btn-primary text-white py-3 rounded-xl font-semibold transition-all hover:shadow-lg"> 💾 Salvar Configuração </button>
@@ -785,8 +829,11 @@
         opponentTeam: '',
         myAthletes: [],
         opponentAthletes: [],
-        showOpponent: false
+        showOpponent: false,
+        selectedMyTeamId: '',
+        selectedOpponentTeamId: ''
       },
+      teamRegistry: [],
       lineup: {
         left: null,
         center: null,
@@ -824,6 +871,7 @@
     // Storage key used only for per-device identification
     const DEVICE_ID_STORAGE_KEY = 'scout_goalball_device_id';
     const LOCAL_CACHE_KEY_PREFIX = 'scout_goalball_cache_v2';
+    const TEAM_REGISTRY_VERSION = 1;
     
     // SDK Data
     let sdkEvents = [];
@@ -866,6 +914,144 @@
       eyeshade: 'illegal-defense',
       other: ''
     };
+    let teamEditorState = createEmptyTeamDraft();
+
+    function createEmptyAthleteDraft() {
+      return {
+        id: `ath-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: '',
+        number: '',
+        role: '',
+        notes: ''
+      };
+    }
+
+    function createEmptyTeamDraft() {
+      return {
+        id: '',
+        name: '',
+        location: '',
+        category: '',
+        athletes: [createEmptyAthleteDraft()]
+      };
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(String(value ?? '')).replace(/"/g, '&quot;');
+    }
+
+    function normalizeAthlete(athlete = {}) {
+      return {
+        id: athlete.id || `ath-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: String(athlete.name || '').trim(),
+        number: String(athlete.number || '').trim(),
+        role: String(athlete.role || athlete.position || '').trim(),
+        notes: String(athlete.notes || athlete.observation || '').trim()
+      };
+    }
+
+    function normalizeTeam(team = {}) {
+      const athletes = Array.isArray(team.athletes) ? team.athletes.map(normalizeAthlete) : [];
+      return {
+        id: team.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: String(team.name || '').trim(),
+        location: String(team.location || team.cityState || '').trim(),
+        category: String(team.category || '').trim(),
+        athletes,
+        createdAt: team.createdAt || new Date().toISOString(),
+        updatedAt: team.updatedAt || new Date().toISOString()
+      };
+    }
+
+    function normalizeTeamRegistry(list) {
+      return Array.isArray(list)
+        ? list.map(normalizeTeam).filter(team => team.name || team.athletes.some(a => a.name || a.number))
+        : [];
+    }
+
+    function getSavedTeamById(teamId) {
+      return AppState.teamRegistry.find(team => team.id === teamId) || null;
+    }
+
+    function getTeamSelectionLabel(team) {
+      const meta = [team.location, team.category].filter(Boolean).join(' • ');
+      return meta ? `${team.name} (${meta})` : team.name;
+    }
+
+    function buildConfigAthletesFromTeam(team) {
+      return (team?.athletes || []).map(athlete => ({
+        name: athlete.name || '',
+        number: athlete.number || '',
+        role: athlete.role || '',
+        notes: athlete.notes || ''
+      }));
+    }
+
+    function getTeamMetaText(team) {
+      if (!team) return 'Nenhuma equipe salva selecionada.';
+      const parts = [];
+      if (team.location) parts.push(team.location);
+      if (team.category) parts.push(`Categoria: ${team.category}`);
+      parts.push(`${team.athletes.length} atleta(s) cadastrado(s)`);
+      return `Usando cadastro salvo. ${parts.join(' • ')}`;
+    }
+
+    function sanitizeDuplicateNumbers(athletes) {
+      const seen = new Map();
+      const duplicates = [];
+      athletes.forEach((athlete, index) => {
+        const number = String(athlete?.number || '').trim();
+        if (!number) return;
+        if (seen.has(number)) {
+          duplicates.push({ number, firstIndex: seen.get(number), secondIndex: index });
+          return;
+        }
+        seen.set(number, index);
+      });
+      return duplicates;
+    }
+
+    function syncTeamMetaLabels() {
+      const myMeta = document.getElementById('my-team-meta');
+      const oppMeta = document.getElementById('opponent-team-meta');
+      if (myMeta) myMeta.textContent = getTeamMetaText(getSavedTeamById(AppState.config.selectedMyTeamId));
+      if (oppMeta) oppMeta.textContent = getTeamMetaText(getSavedTeamById(AppState.config.selectedOpponentTeamId));
+    }
+
+    function validateLineupIndices() {
+      const isValidMyIndex = (idx) => idx === null || !!AppState.config.myAthletes[idx];
+      const isValidOppIndex = (idx) => idx === null || !!AppState.config.opponentAthletes[idx];
+      if (!isValidMyIndex(AppState.lineup.left)) AppState.lineup.left = null;
+      if (!isValidMyIndex(AppState.lineup.center)) AppState.lineup.center = null;
+      if (!isValidMyIndex(AppState.lineup.right)) AppState.lineup.right = null;
+      if (!isValidOppIndex(AppState.lineup.opponentLeft)) AppState.lineup.opponentLeft = null;
+      if (!isValidOppIndex(AppState.lineup.opponentCenter)) AppState.lineup.opponentCenter = null;
+      if (!isValidOppIndex(AppState.lineup.opponentRight)) AppState.lineup.opponentRight = null;
+    }
+
+    function migrateLegacyTeams() {
+      if (AppState.teamRegistry.length > 0) return false;
+      const migratedTeams = [];
+      const myHasData = AppState.config.myTeam || (AppState.config.myAthletes || []).some(a => a?.name || a?.number);
+      if (myHasData) {
+        migratedTeams.push(normalizeTeam({
+          name: AppState.config.myTeam || 'Minha Equipe',
+          athletes: AppState.config.myAthletes || []
+        }));
+      }
+      const oppHasData = AppState.config.opponentTeam || (AppState.config.opponentAthletes || []).some(a => a?.name || a?.number);
+      if (oppHasData) {
+        migratedTeams.push(normalizeTeam({
+          name: AppState.config.opponentTeam || 'Adversário',
+          athletes: AppState.config.opponentAthletes || []
+        }));
+      }
+      if (!migratedTeams.length) return false;
+      AppState.teamRegistry = migratedTeams;
+      if (!AppState.config.selectedMyTeamId && migratedTeams[0]) AppState.config.selectedMyTeamId = migratedTeams[0].id;
+      if (!AppState.config.selectedOpponentTeamId && migratedTeams[1]) AppState.config.selectedOpponentTeamId = migratedTeams[1].id;
+      return true;
+    }
 
     function normalizeTarget(target) {
       const normalized = String(target || '').trim();
@@ -1126,6 +1312,7 @@
         phase: AppState.lineup.phase,
         statistics,
         config: AppState.config,
+        teamRegistry: AppState.teamRegistry,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
         currentTargets: AppState.currentTargets,
@@ -1207,10 +1394,12 @@
 
     function serializeStateForCache() {
       return {
-        version: 2,
+        version: 3,
+        teamRegistryVersion: TEAM_REGISTRY_VERSION,
         savedAt: Date.now(),
         matchId: AppState.matchId,
         config: AppState.config,
+        teamRegistry: AppState.teamRegistry,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
         currentTargets: AppState.currentTargets,
@@ -1242,7 +1431,9 @@
       if (!payload || typeof payload !== 'object') return;
       suppressCloudSync = true;
       AppState.matchId = payload.matchId || AppState.matchId || Date.now().toString();
-      AppState.config = payload.config || AppState.config;
+      AppState.config = { ...AppState.config, ...(payload.config || {}) };
+      AppState.teamRegistry = normalizeTeamRegistry(payload.teamRegistry || AppState.teamRegistry);
+      migrateLegacyTeams();
       AppState.lineup = payload.lineup || AppState.lineup;
       AppState.targetPlans = payload.targetPlans || AppState.targetPlans;
       AppState.currentTargets = payload.currentTargets || AppState.currentTargets;
@@ -1250,6 +1441,7 @@
       AppState.archivedMatches = payload.archivedMatches || AppState.archivedMatches;
       sdkEvents = Array.isArray(payload.events) ? payload.events.map(normalizeStoredEvent) : sdkEvents;
       AppState.events = [...sdkEvents];
+      validateLineupIndices();
       suppressCloudSync = false;
       console.info(`[SYNC] Estado aplicado da fonte: ${source}`, { matchId: AppState.matchId, events: AppState.events.length });
     }
@@ -1258,6 +1450,8 @@
       loadConfigToForm();
       updateLineupSelectors();
       updateLineupDisplay();
+      renderSavedTeamSelectors();
+      renderTeamManagement();
       renderTargetPlan();
       renderHistoryMatchSelector();
       renderReportMatchSelector();
@@ -2331,6 +2525,149 @@
         `;
       }
       opponentContainer.innerHTML = opponentHTML;
+      syncTeamMetaLabels();
+    }
+
+    function renderSavedTeamSelectors() {
+      const mySelect = document.getElementById('saved-my-team-select');
+      const oppSelect = document.getElementById('saved-opponent-team-select');
+      if (!mySelect || !oppSelect) return;
+      const baseOption = '<option value="">Selecionar equipe salva</option>';
+      const options = AppState.teamRegistry
+        .map(team => `<option value="${team.id}">${escapeHtml(getTeamSelectionLabel(team))}</option>`)
+        .join('');
+      mySelect.innerHTML = baseOption + options;
+      oppSelect.innerHTML = baseOption + options;
+      mySelect.value = AppState.config.selectedMyTeamId || '';
+      oppSelect.value = AppState.config.selectedOpponentTeamId || '';
+      syncTeamMetaLabels();
+    }
+
+    function applySavedTeamToConfig(teamId, side) {
+      const team = getSavedTeamById(teamId);
+      if (!team) return;
+      const keyPrefix = side === 'my' ? 'My' : 'Opponent';
+      AppState.config[`selected${keyPrefix}TeamId`] = team.id;
+      if (side === 'opponent') AppState.config.showOpponent = true;
+      AppState.config[side === 'my' ? 'myTeam' : 'opponentTeam'] = team.name;
+      AppState.config[side === 'my' ? 'myAthletes' : 'opponentAthletes'] = buildConfigAthletesFromTeam(team);
+      validateLineupIndices();
+      ensureOpponentLineupDefaults();
+      loadConfigToForm();
+      updateLineupSelectors();
+      updateLineupDisplay();
+      renderSavedTeamSelectors();
+      renderTargetPlan();
+      saveToLocalStorage();
+      showToast(`✅ ${side === 'my' ? 'Minha equipe' : 'Equipe adversária'} carregada do cadastro.`);
+    }
+
+    function clearSavedTeamSelection(side) {
+      const key = side === 'my' ? 'selectedMyTeamId' : 'selectedOpponentTeamId';
+      AppState.config[key] = '';
+      syncTeamMetaLabels();
+      renderSavedTeamSelectors();
+      saveToLocalStorage();
+    }
+
+    function renderTeamManagement() {
+      const list = document.getElementById('teams-management-list');
+      const emptyState = document.getElementById('teams-empty-state');
+      if (!list || !emptyState) return;
+      emptyState.classList.toggle('hidden', AppState.teamRegistry.length > 0);
+      list.innerHTML = AppState.teamRegistry.map(team => {
+        const athletesCount = team.athletes.length;
+        const meta = [team.location, team.category].filter(Boolean).join(' • ');
+        return `
+          <div class="border border-slate-200 rounded-xl p-4">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+              <div>
+                <div class="font-semibold text-slate-800">${escapeHtml(team.name || 'Sem nome')}</div>
+                <div class="text-sm text-slate-500">${escapeHtml(meta || 'Sem cidade/estado e categoria')}</div>
+                <div class="text-xs text-slate-400 mt-1">${athletesCount} atleta(s)</div>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button class="team-use-btn px-3 py-2 rounded-lg border border-blue-200 text-blue-700 text-sm" data-team-id="${team.id}" data-side="my">Usar na minha equipe</button>
+                <button class="team-use-btn px-3 py-2 rounded-lg border border-rose-200 text-rose-700 text-sm" data-team-id="${team.id}" data-side="opponent">Usar no adversário</button>
+                <button class="team-edit-btn px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm" data-team-id="${team.id}">Editar</button>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              ${team.athletes.length
+                ? team.athletes.map(athlete => `<span class="px-3 py-1 bg-slate-50 rounded-full text-xs border border-slate-200">${escapeHtml(`${athlete.number || 's/n'} - ${athlete.name || 'Sem nome'}`)}</span>`).join('')
+                : '<span class="text-xs text-slate-400">Sem atletas cadastrados.</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      renderTeamEditor();
+    }
+
+    function renderTeamEditor() {
+      document.getElementById('team-editor-title').textContent = teamEditorState.id ? 'Editar equipe' : 'Nova equipe';
+      document.getElementById('team-form-name').value = teamEditorState.name || '';
+      document.getElementById('team-form-location').value = teamEditorState.location || '';
+      document.getElementById('team-form-category').value = teamEditorState.category || '';
+      document.getElementById('delete-team-btn').classList.toggle('hidden', !teamEditorState.id);
+      const warning = document.getElementById('team-form-duplicate-warning');
+      const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes);
+      if (duplicates.length) {
+        warning.textContent = `Números duplicados encontrados: ${duplicates.map(d => d.number).join(', ')}.`;
+        warning.classList.remove('hidden');
+      } else {
+        warning.classList.add('hidden');
+      }
+      const list = document.getElementById('team-athletes-form-list');
+      list.innerHTML = (teamEditorState.athletes.length ? teamEditorState.athletes : [createEmptyAthleteDraft()]).map((athlete, index) => `
+        <div class="border border-slate-200 rounded-xl p-3" data-athlete-row="${index}">
+          <div class="grid grid-cols-1 md:grid-cols-[1.5fr_100px_1fr] gap-3 mb-3">
+            <input type="text" class="team-athlete-name px-3 py-2 border border-slate-300 rounded-lg" placeholder="Nome do atleta" value="${escapeAttribute(athlete.name)}" data-index="${index}">
+            <input type="text" class="team-athlete-number px-3 py-2 border border-slate-300 rounded-lg text-center" placeholder="Nº" value="${escapeAttribute(athlete.number)}" data-index="${index}">
+            <input type="text" class="team-athlete-role px-3 py-2 border border-slate-300 rounded-lg" placeholder="Posição/função" value="${escapeAttribute(athlete.role)}" data-index="${index}">
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+            <textarea class="team-athlete-notes px-3 py-2 border border-slate-300 rounded-lg" rows="2" placeholder="Observação opcional" data-index="${index}">${escapeHtml(athlete.notes)}</textarea>
+            <button class="remove-team-athlete self-start px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm" data-index="${index}">Remover</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function resetTeamEditor() {
+      teamEditorState = createEmptyTeamDraft();
+      renderTeamEditor();
+    }
+
+    function loadTeamIntoEditor(teamId) {
+      const team = getSavedTeamById(teamId);
+      if (!team) return;
+      teamEditorState = {
+        id: team.id,
+        name: team.name,
+        location: team.location,
+        category: team.category,
+        athletes: team.athletes.map(athlete => ({ ...athlete }))
+      };
+      renderTeamEditor();
+    }
+
+    function collectTeamEditorData() {
+      const athletes = Array.from(document.querySelectorAll('#team-athletes-form-list [data-athlete-row]')).map((row, index) => normalizeAthlete({
+        id: teamEditorState.athletes[index]?.id,
+        name: row.querySelector('.team-athlete-name')?.value || '',
+        number: row.querySelector('.team-athlete-number')?.value || '',
+        role: row.querySelector('.team-athlete-role')?.value || '',
+        notes: row.querySelector('.team-athlete-notes')?.value || ''
+      })).filter(athlete => athlete.name || athlete.number || athlete.role || athlete.notes);
+      return normalizeTeam({
+        id: teamEditorState.id,
+        createdAt: getSavedTeamById(teamEditorState.id)?.createdAt,
+        name: document.getElementById('team-form-name').value,
+        location: document.getElementById('team-form-location').value,
+        category: document.getElementById('team-form-category').value,
+        athletes,
+        updatedAt: new Date().toISOString()
+      });
     }
     
     function loadConfigToForm() {
@@ -2343,8 +2680,11 @@
       
       if (AppState.config.showOpponent) {
         document.getElementById('opponent-section').classList.remove('hidden');
+      } else {
+        document.getElementById('opponent-section').classList.add('hidden');
       }
-      
+
+      renderSavedTeamSelectors();
       renderAthleteInputs();
     }
     
@@ -2376,12 +2716,87 @@
           number: oppNumbers[i].value
         });
       });
+
+      const myDuplicates = sanitizeDuplicateNumbers(AppState.config.myAthletes.filter(a => a.name || a.number));
+      if (myDuplicates.length) {
+        showToast(`⚠️ Números duplicados na minha equipe: ${myDuplicates.map(d => d.number).join(', ')}`);
+        return;
+      }
+
+      const oppDuplicates = sanitizeDuplicateNumbers(AppState.config.opponentAthletes.filter(a => a.name || a.number));
+      if (oppDuplicates.length) {
+        showToast(`⚠️ Números duplicados no adversário: ${oppDuplicates.map(d => d.number).join(', ')}`);
+        return;
+      }
       
       saveToLocalStorage();
+      validateLineupIndices();
       ensureOpponentLineupDefaults();
       updateLineupSelectors();
+      updateLineupDisplay();
       renderTargetPlan();
       showToast('✅ Configuração salva com sucesso!');
+    }
+
+    function saveTeamEditor() {
+      const team = collectTeamEditorData();
+      if (!team.name) {
+        showToast('⚠️ Informe o nome da equipe.');
+        return;
+      }
+      const duplicates = sanitizeDuplicateNumbers(team.athletes);
+      if (duplicates.length) {
+        renderTeamEditor();
+        showToast(`⚠️ Corrija os números duplicados: ${duplicates.map(d => d.number).join(', ')}`);
+        return;
+      }
+
+      const existingIndex = AppState.teamRegistry.findIndex(item => item.id === team.id);
+      if (existingIndex >= 0) {
+        AppState.teamRegistry[existingIndex] = {
+          ...AppState.teamRegistry[existingIndex],
+          ...team,
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        AppState.teamRegistry.unshift({
+          ...team,
+          id: team.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          createdAt: team.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      const selectedSides = [
+        ['selectedMyTeamId', 'my'],
+        ['selectedOpponentTeamId', 'opponent']
+      ];
+      selectedSides.forEach(([configKey, side]) => {
+        if (AppState.config[configKey] === team.id) {
+          applySavedTeamToConfig(team.id, side);
+        }
+      });
+
+      renderSavedTeamSelectors();
+      renderTeamManagement();
+      saveToLocalStorage();
+      resetTeamEditor();
+      showToast('✅ Equipe salva com sucesso!');
+    }
+
+    function deleteTeamFromRegistry(teamId) {
+      const team = getSavedTeamById(teamId);
+      if (!team) return;
+      const confirmed = window.confirm(`Excluir a equipe "${team.name}"?`);
+      if (!confirmed) return;
+      AppState.teamRegistry = AppState.teamRegistry.filter(item => item.id !== teamId);
+      if (AppState.config.selectedMyTeamId === teamId) clearSavedTeamSelection('my');
+      if (AppState.config.selectedOpponentTeamId === teamId) clearSavedTeamSelection('opponent');
+      renderSavedTeamSelectors();
+      renderTeamManagement();
+      saveToLocalStorage();
+      resetTeamEditor();
+      showToast('🗑️ Equipe excluída.');
     }
     
     // =====================================================
@@ -4060,6 +4475,68 @@ function renderHeatmap(optionsOrFilter) {
         document.getElementById('opponent-section').classList.toggle('hidden', !e.target.checked);
         saveToLocalStorage();
       });
+
+      document.getElementById('saved-my-team-select').addEventListener('change', (e) => {
+        if (!e.target.value) {
+          clearSavedTeamSelection('my');
+          return;
+        }
+        applySavedTeamToConfig(e.target.value, 'my');
+      });
+
+      document.getElementById('saved-opponent-team-select').addEventListener('change', (e) => {
+        if (!e.target.value) {
+          clearSavedTeamSelection('opponent');
+          return;
+        }
+        applySavedTeamToConfig(e.target.value, 'opponent');
+      });
+
+      document.getElementById('clear-my-team-selection').addEventListener('click', () => clearSavedTeamSelection('my'));
+      document.getElementById('clear-opponent-team-selection').addEventListener('click', () => clearSavedTeamSelection('opponent'));
+      document.getElementById('new-team-btn').addEventListener('click', resetTeamEditor);
+      document.getElementById('cancel-team-edit').addEventListener('click', resetTeamEditor);
+      document.getElementById('save-team-btn').addEventListener('click', saveTeamEditor);
+      document.getElementById('delete-team-btn').addEventListener('click', () => deleteTeamFromRegistry(teamEditorState.id));
+      document.getElementById('add-team-athlete').addEventListener('click', () => {
+        teamEditorState.athletes.push(createEmptyAthleteDraft());
+        renderTeamEditor();
+      });
+
+      document.getElementById('teams-management-list').addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.team-edit-btn');
+        const useBtn = e.target.closest('.team-use-btn');
+        if (editBtn) loadTeamIntoEditor(editBtn.dataset.teamId);
+        if (useBtn) applySavedTeamToConfig(useBtn.dataset.teamId, useBtn.dataset.side);
+      });
+
+      document.getElementById('team-athletes-form-list').addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-team-athlete');
+        if (!removeBtn) return;
+        const index = Number(removeBtn.dataset.index);
+        teamEditorState.athletes.splice(index, 1);
+        if (!teamEditorState.athletes.length) teamEditorState.athletes.push(createEmptyAthleteDraft());
+        renderTeamEditor();
+      });
+
+      document.getElementById('team-athletes-form-list').addEventListener('input', () => {
+        const draft = collectTeamEditorData();
+        teamEditorState = { ...draft, athletes: draft.athletes.length ? draft.athletes : [createEmptyAthleteDraft()] };
+        const warning = document.getElementById('team-form-duplicate-warning');
+        const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes);
+        if (duplicates.length) {
+          warning.textContent = `Números duplicados encontrados: ${duplicates.map(d => d.number).join(', ')}.`;
+          warning.classList.remove('hidden');
+        } else {
+          warning.classList.add('hidden');
+        }
+      });
+
+      ['team-form-name', 'team-form-location', 'team-form-category'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          teamEditorState = collectTeamEditorData();
+        });
+      });
       
       document.getElementById('save-config').addEventListener('click', saveConfig);
       
@@ -4956,6 +5433,7 @@ populateHeatmapAthletes();
         exportedAt: new Date().toISOString(),
         matchId: AppState.matchId,
         config: AppState.config,
+        teamRegistry: AppState.teamRegistry,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
         currentTargets: AppState.currentTargets,
@@ -4981,7 +5459,9 @@ populateHeatmapAthletes();
           const parsed = JSON.parse(String(reader.result || '{}'));
           if (!parsed.matchId || !Array.isArray(parsed.events)) throw new Error('Arquivo inválido');
           AppState.matchId = parsed.matchId;
-          AppState.config = parsed.config || AppState.config;
+          AppState.config = { ...AppState.config, ...(parsed.config || {}) };
+          AppState.teamRegistry = normalizeTeamRegistry(parsed.teamRegistry || AppState.teamRegistry);
+          migrateLegacyTeams();
           AppState.lineup = parsed.lineup || AppState.lineup;
           AppState.targetPlans = parsed.targetPlans || AppState.targetPlans;
           AppState.currentTargets = parsed.currentTargets || AppState.currentTargets;
@@ -4994,6 +5474,8 @@ populateHeatmapAthletes();
           loadConfigToForm();
           updateLineupSelectors();
           updateLineupDisplay();
+          renderSavedTeamSelectors();
+          renderTeamManagement();
           renderTargetPlan();
           renderHistoryMatchSelector();
           renderReportMatchSelector();
@@ -5017,8 +5499,11 @@ populateHeatmapAthletes();
     
     async function init() {
       loadFromLocalStorage();
+      migrateLegacyTeams();
       loadConfigToForm();
       renderAthleteInputs();
+      renderSavedTeamSelectors();
+      renderTeamManagement();
       ensureOpponentLineupDefaults();
       updateLineupSelectors();
       updateLineupDisplay();
