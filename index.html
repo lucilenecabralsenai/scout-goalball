@@ -1223,9 +1223,14 @@
 
     function resolveResultLabel(event) {
       const result = String(event?.result || '').trim();
+      if (isPenaltyGoalEvent(event)) return 'gol de pênalti';
       if (result !== 'penalidade') return result || '-';
       const penalty = getPenaltyLabel(event?.penaltyType);
       return penalty ? `penalidade (${penalty})` : 'penalidade';
+    }
+
+    function isPenaltyGoalEvent(event) {
+      return event?.type === 'event' && (event?.isPenaltyGoal === true || event?.result === 'gol-penalti');
     }
 
     function isNoAttackPenaltyEvent(event) {
@@ -1242,7 +1247,8 @@
         const note = event.observation ? ` • Obs: ${event.observation}` : '';
         return `Sem arremesso • ${penalty}${note}`;
       }
-      const base = `${event.ballType || '-'} → Alvo ${normalizeTarget(event.target) || '-'} • Sit. ${resolveGameSituation(event)} = ${event.result}`;
+      const resultLabel = resolveResultLabel(event);
+      const base = `${event.ballType || '-'} → Alvo ${normalizeTarget(event.target) || '-'} • Sit. ${resolveGameSituation(event)} = ${resultLabel}`;
       const extras = [event.defenseLocation ? `Defesa: ${event.defenseLocation}` : '', event.ballOutcome ? `Desfecho: ${event.ballOutcome}` : ''].filter(Boolean).join(' • ');
       return extras ? `${base} • ${extras}` : base;
     }
@@ -1257,6 +1263,8 @@
         cloned.gameSituation = resolveGameSituation(cloned);
         cloned.penaltyType = normalizePenaltyType(cloned.penaltyType);
         cloned.noAttackPenalty = Boolean(cloned.noAttackPenalty);
+        cloned.isPenaltyGoal = Boolean(cloned.isPenaltyGoal || cloned.result === 'gol-penalti');
+        if (cloned.result === 'gol-penalti') cloned.result = 'gol';
         cloned.observation = String(cloned.observation || '').trim();
         cloned.defenseLocation = String(cloned.defenseLocation || '').trim();
         cloned.ballOutcome = String(cloned.ballOutcome || '').trim();
@@ -3530,6 +3538,8 @@
       if (!attackState.result) return showToast('⚠️ Selecione o resultado do lance');
       const noAttackPenalty = attackState.result === 'penalidade' && attackState.noAttackPenalty;
       const quickResult = ['fora','ballover'].includes(attackState.result);
+      const isPenaltyGoal = attackState.result === 'gol-penalti';
+      const normalizedResult = isPenaltyGoal ? 'gol' : attackState.result;
       if (!noAttackPenalty && !quickResult && attackState.result !== 'gol-penalti' && (attackState.athlete === '' || !attackState.ballType || !attackState.target)) {
         return showToast('⚠️ Preencha arremessador, alvo e tipo de bola');
       }
@@ -3548,7 +3558,7 @@
         team: attackState.team, athleteNumber: athlete?.number || '', athleteName: athlete?.name || '',
         ballType: (noAttackPenalty||quickResult||attackState.result==='gol-penalti') ? '' : normalizeBallType(attackState.ballType),
         target: (noAttackPenalty||quickResult||attackState.result==='gol-penalti') ? '' : attackState.target,
-        result: attackState.result, penaltyType: normalizePenaltyType(attackState.penaltyType), noAttackPenalty,
+        result: normalizedResult, isPenaltyGoal, penaltyType: normalizePenaltyType(attackState.penaltyType), noAttackPenalty,
         observation: String(attackState.observation||'').trim(), gameSituation: noAttackPenalty ? '' : normalizeGameSituation(attackState.gameSituation),
         offensiveSystem: noAttackPenalty ? '' : normalizeGameSituation(attackState.gameSituation), plannedTargets: noAttackPenalty ? '' : JSON.stringify(AppState.currentTargets[attackState.athlete] || []),
         defenseLocation: attackState.defenseLocation, ballOutcome: attackState.ballOutcome, penaltyTeam:pTeam, penaltyAthleteNumber:pAthlete?.number || '', penaltyAthleteName:pAthlete?.name || '',
@@ -3561,7 +3571,7 @@
       } else createLocalEvent(event);
 
       if (attackState.result === 'penalidade') AppState.matchRules.pendingPenaltyShotTeam = attackState.team === 'my' ? 'opponent' : 'my';
-      if (attackState.result === 'gol-penalti') AppState.matchRules.pendingPenaltyShotTeam = null;
+      if (isPenaltyGoal) AppState.matchRules.pendingPenaltyShotTeam = null;
       if (!noAttackPenalty) applyAttackPossessionRule(event);
       prepareAttackForNextRegister();
       showToast('✅ Lance registrado!');
@@ -3920,7 +3930,7 @@
       container.innerHTML = events.map(e => {
 
         const teamClass = e.team === 'my' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
-        const resultEmoji = e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';        
+        const resultEmoji = isPenaltyGoalEvent(e) ? '🎯' : e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';
         return `
           <div class="p-2 rounded-lg border ${teamClass} text-sm">
             <div class="flex items-center justify-between">
@@ -4057,7 +4067,7 @@
         }
 
         const teamClass = e.team === 'my' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
-        const resultEmoji = e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';
+        const resultEmoji = isPenaltyGoalEvent(e) ? '🎯' : e.result === 'gol' ? '⚽' : e.result === 'defendida' ? '🧤' : e.result === 'fora' ? '❌' : e.result === 'blockout' ? '🚫' : e.result === 'ballover' ? '🔁' : '⚠️';
         
         return `
           <div class="p-3 rounded-lg border ${teamClass}" data-id="${getEventId(e)}">
