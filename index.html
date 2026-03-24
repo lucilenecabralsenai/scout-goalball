@@ -298,8 +298,6 @@
      <div class="max-w-4xl mx-auto space-y-4"><div class="bg-white rounded-xl p-4 card-shadow border border-slate-200 space-y-3"><div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2"><div><div class="text-xs uppercase tracking-wide text-slate-500">Placar atual</div><div id="match-score" class="text-2xl font-bold text-slate-800">0 - 0</div></div><div class="text-sm text-slate-500">Formação em quadra</div></div><div id="jogo-oncourt" class="grid grid-cols-1 md:grid-cols-3 gap-2"><div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-500">Ala E</div><div class="font-semibold text-slate-800">#-</div></div><div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-500">Pivô</div><div class="font-semibold text-slate-800">#-</div></div><div class="rounded-lg border border-slate-200 bg-slate-50 p-3"><div class="text-xs text-slate-500">Ala D</div><div class="font-semibold text-slate-800">#-</div></div></div></div><!-- Quick Actions -->
       <div class="grid grid-cols-2 gap-3"><button id="btn-attack" class="bg-gradient-to-br from-green-500 to-green-700 text-white p-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"> ⚡ Registrar Ataque </button> <button id="btn-change-target" class="bg-gradient-to-br from-orange-500 to-orange-700 text-white p-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all"> 🎯 Mudança de Alvo </button>
       </div>
-      <div class="grid grid-cols-1 gap-3"><button id="btn-end-match" class="bg-gradient-to-br from-red-500 to-red-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🏁 Encerrar Partida </button>
-     </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><button id="btn-end-match" class="bg-gradient-to-br from-red-500 to-red-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🏁 Encerrar Partida </button> <button id="btn-new-match" class="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🆕 Nova Partida </button>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3"><button id="btn-quick-sub" class="bg-gradient-to-br from-amber-500 to-amber-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> 🔄 Substituição </button> <button id="btn-timeout" class="bg-gradient-to-br from-blue-500 to-blue-700 text-white p-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"> ⏱️ Timeout </button>
@@ -1458,6 +1456,10 @@
       return `match-${Date.now()}-${matchIdSequence}-${Math.random().toString(36).slice(2, 8)}`;
     }
 
+    function hasActiveMatch() {
+      return Boolean(AppState.matchId);
+    }
+
     function getDeviceId() {
       const existing = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
       if (existing) return existing;
@@ -1544,7 +1546,7 @@
     }
 
     async function pushCurrentMatchToCloud(statusOverride = null) {
-      if (!firestoreDb || !AppState.auth.user?.uid) return;
+      if (!firestoreDb || !AppState.auth.user?.uid || !AppState.matchId) return;
       updateSyncStatus(navigator.onLine ? 'syncing' : 'offline');
       const matchRef = doc(collection(firestoreDb, 'matches'), AppState.matchId);
       await setDoc(matchRef, createMatchPayload(statusOverride), { merge: true });
@@ -1661,7 +1663,7 @@
     function applyStateFromSource(payload, source = 'local') {
       if (!payload || typeof payload !== 'object') return;
       suppressCloudSync = true;
-      AppState.matchId = payload.matchId || AppState.matchId || generateMatchId();
+      AppState.matchId = payload.matchId || AppState.matchId || null;
       AppState.config = { ...AppState.config, ...(payload.config || {}) };
       normalizeConfigAthletes();
       AppState.teamRegistry = normalizeTeamRegistry(payload.teamRegistry || AppState.teamRegistry);
@@ -1804,12 +1806,13 @@
       const activeMatch = matchDocs.find((d) => {
         const status = d.data()?.status;
         return status === 'live' || status === 'draft';
-      }) || matchDocs[0];
+      }) || null;
 
-      const activeData = activeMatch?.data() || {};
+      const fallbackData = matchDocs[0]?.data() || {};
+      const activeData = activeMatch?.data() || fallbackData;
       const remoteState = {
         updatedAt: toEpochMs(activeData.updatedAt),
-        matchId: activeMatch?.id,
+        matchId: activeMatch?.id || null,
         config: activeData.config || AppState.config,
         teamRegistry: activeData.teamRegistry || AppState.teamRegistry,
         lineup: activeData.lineup || AppState.lineup,
@@ -1838,10 +1841,12 @@
         if (!remoteMatches.length) return;
 
         const hasCurrentMatchRemotely = remoteMatches.some((match) => match.id === AppState.matchId);
-        const liveMatch = remoteMatches.find((m) => m.status === 'live' || m.status === 'draft') || remoteMatches[0];
+        const liveMatch = remoteMatches.find((m) => m.status === 'live' || m.status === 'draft') || null;
         if (!hasCurrentMatchRemotely && liveMatch?.id && liveMatch.id !== AppState.matchId) {
           AppState.matchId = liveMatch.id;
           subscribeToCurrentMatch();
+        } else if (!liveMatch && !hasCurrentMatchRemotely) {
+          AppState.matchId = null;
         }
 
         const archived = remoteMatches
@@ -1952,12 +1957,17 @@
       if (cache) {
         console.info('[SYNC] Cache local carregado na inicialização (pré-auth)');
         applyStateFromSource(cache, 'boot-local-cache');
-        if (!AppState.matchId) AppState.matchId = generateMatchId();
         return;
       }
-      AppState.matchId = generateMatchId();
+      AppState.matchId = null;
       AppState.events = [];
       sdkEvents = [];
+    }
+
+    function ensureActiveMatch(actionLabel = 'executar esta ação') {
+      if (hasActiveMatch()) return true;
+      showToast(`⚠️ Clique em "Nova Partida" antes de ${actionLabel}.`);
+      return false;
     }
 
     function getEventId(event) {
@@ -1990,6 +2000,7 @@
     }
 
     function createLocalEvent(event) {
+      if (!ensureActiveMatch('registrar eventos')) return null;
       const localEvent = {
         ...event,
         __localId: event.__localId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -2145,7 +2156,7 @@
 
     function getSelectedReportMatchId() {
       const sel = document.getElementById('report-match-select');
-      if (!sel || sel.value === 'current') return AppState.matchId;
+      if (!sel || sel.value === 'current') return hasActiveMatch() ? AppState.matchId : null;
       return sel.value;
     }
 
@@ -2162,7 +2173,9 @@
       const select = document.getElementById('report-match-select');
       if (!select) return;
       const currentValue = select.value;
-      const options = ['<option value="current">Partida atual</option>'];
+      const options = [hasActiveMatch()
+        ? '<option value="current">Partida atual</option>'
+        : '<option value="current">Sem partida atual (pré-jogo)</option>'];
       [...AppState.archivedMatches]
         .sort((a, b) => new Date(b.endedAt || 0) - new Date(a.endedAt || 0))
         .forEach(match => options.push(`<option value="${match.id}">${formatMatchLabel(match)}</option>`));
@@ -2645,8 +2658,8 @@
       unsubscribeMatchDoc = null;
       unsubscribeMatchEvents?.();
       unsubscribeMatchEvents = null;
-      const currentMatchEvents = getCurrentMatchEvents();
-      if (currentMatchEvents.length > 0) {
+      const currentMatchEvents = previousMatchId ? getCurrentMatchEvents() : [];
+      if (previousMatchId && currentMatchEvents.length > 0) {
         AppState.archivedMatches = [
           ...AppState.archivedMatches.filter(m => m.id !== AppState.matchId),
           {
@@ -2685,6 +2698,7 @@
 
 
     function getCurrentMatchEvents() {
+      if (!AppState.matchId) return [];
       return sdkEvents.filter(e => e.matchId === AppState.matchId);
     }
 
@@ -2709,6 +2723,7 @@
     }
 
     function buildCurrentMatchSummary() {
+      if (!AppState.matchId) return null;
       const score = getScoreForMatch(AppState.matchId);
       return {
         id: AppState.matchId,
@@ -2739,7 +2754,7 @@
       const current = buildCurrentMatchSummary();
       const archived = (AppState.archivedMatches || []).map((match) => {
         const score = getMatchScoreParts(match);
-        const isInProgress = match.id === AppState.matchId;
+        const isInProgress = hasActiveMatch() && match.id === AppState.matchId;
         return {
           ...match,
           myGoals: score.myGoals,
@@ -2747,7 +2762,8 @@
           status: isInProgress ? 'in-progress' : (match.status || 'ended')
         };
       });
-      const unique = new Map([[current.id, current]]);
+      const unique = new Map();
+      if (current?.id) unique.set(current.id, current);
       archived.forEach((match) => unique.set(match.id, { ...unique.get(match.id), ...match }));
       return Array.from(unique.values()).sort((a, b) => {
         const aTime = toEpochMs(a.updatedAt || a.endedAt || a.createdAt || a.date);
@@ -2795,7 +2811,9 @@
       const select = document.getElementById('history-match-select');
       if (!select) return;
 
-      const currentOption = `<option value="current">Partida atual</option>`;
+      const currentOption = hasActiveMatch()
+        ? `<option value="current">Partida atual</option>`
+        : `<option value="current">Sem partida atual (pré-jogo)</option>`;
       const archived = [...AppState.archivedMatches]
         .sort((a, b) => new Date(b.endedAt || 0) - new Date(a.endedAt || 0))
         .map(match => `<option value="${match.id}">${formatMatchLabel(match)}</option>`)
@@ -2817,6 +2835,10 @@
       if (!meta || !select) return;
 
       if (select.value === 'current') {
+        if (!hasActiveMatch()) {
+          meta.textContent = 'Nenhuma partida ativa. Ajuste as configurações e clique em "Nova Partida".';
+          return;
+        }
         const score = getScoreForMatch(AppState.matchId);
         meta.textContent = `Partida atual • ID ${AppState.matchId} • Placar: ${score.myGoals} x ${score.oppGoals}`;
         return;
@@ -2834,7 +2856,7 @@
 
     function getSelectedHistoryMatchId() {
       const select = document.getElementById('history-match-select');
-      if (!select || select.value === 'current') return AppState.matchId;
+      if (!select || select.value === 'current') return hasActiveMatch() ? AppState.matchId : null;
       return select.value;
     }
 
@@ -3020,6 +3042,7 @@
     }
 
     async function endMatch() {
+      if (!ensureActiveMatch('encerrar a partida')) return;
       const currentEvents = getCurrentMatchEvents();
       const score = getScoreForMatch(AppState.matchId);
       const previousMatchId = AppState.matchId;
@@ -3053,7 +3076,7 @@
       } catch (error) {
         console.warn('[SYNC] Não foi possível marcar a partida encerrada no Firebase', error);
       }
-      AppState.matchId = generateMatchId();
+      AppState.matchId = null;
       resetCurrentMatchState();
       saveToLocalStorage();
       renderHistoryMatchSelector();
@@ -3068,9 +3091,8 @@
       renderHistory();
       updateAllStats();
       renderRecentEvents();
-      showToast('🏁 Partida encerrada e salva! Nova partida iniciada.');
+      showToast('🏁 Partida encerrada e salva!');
       enqueueCloudSync('end-match');
-      subscribeToCurrentMatch();
     }
     
     // =====================================================
@@ -5598,18 +5620,34 @@ function renderHeatmap(optionsOrFilter) {
       document.getElementById('save-target-plan').addEventListener('click', saveTargetPlan);
       
       // Jogo tab
-      document.getElementById('btn-attack').addEventListener('click', openAttackModal);
-      document.getElementById('btn-change-target').addEventListener('click', openTargetChangeModal);
+      document.getElementById('btn-attack').addEventListener('click', () => {
+        if (!ensureActiveMatch('registrar ataque')) return;
+        openAttackModal();
+      });
+      document.getElementById('btn-change-target').addEventListener('click', () => {
+        if (!ensureActiveMatch('registrar mudança de alvo')) return;
+        openTargetChangeModal();
+      });
       document.getElementById('btn-end-match').addEventListener('click', () => {
-        if (!confirm('Deseja encerrar a partida atual e iniciar uma nova?')) return;
+        if (!hasActiveMatch()) {
+          showToast('⚠️ Não existe partida ativa para encerrar.');
+          return;
+        }
+        if (!confirm('Deseja encerrar a partida atual?')) return;
         endMatch();
       });
       document.getElementById('btn-new-match').addEventListener('click', () => {
         if (!confirm('Deseja iniciar nova partida agora?')) return;
         startNewMatch();
       });
-      document.getElementById('btn-quick-sub').addEventListener('click', openQuickSubModal);
-      document.getElementById('btn-timeout').addEventListener('click', openTimeoutActionModal);
+      document.getElementById('btn-quick-sub').addEventListener('click', () => {
+        if (!ensureActiveMatch('registrar substituição')) return;
+        openQuickSubModal();
+      });
+      document.getElementById('btn-timeout').addEventListener('click', () => {
+        if (!ensureActiveMatch('registrar timeout')) return;
+        openTimeoutActionModal();
+      });
       document.getElementById('close-timeout-report').addEventListener('click', closeTimeoutReport);
       document.getElementById('close-quick-sub-modal').addEventListener('click', closeQuickSubModal);
       document.getElementById('quick-sub-team').addEventListener('change', updateQuickSubSelectors);
