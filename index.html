@@ -847,7 +847,24 @@
       <div class="bg-white rounded-xl p-5 card-shadow space-y-4">
        <div>
         <h2 class="text-lg font-semibold text-slate-800">🏋️ Registro de Treinos Individuais</h2>
-        <p class="text-sm text-slate-500">Treinos são vinculados somente aos atletas e não dependem de equipes.</p>
+        <p class="text-sm text-slate-500">Treinos usam cadastro próprio de atletas e não dependem das equipes do scout de jogo.</p>
+       </div>
+       <div class="border border-slate-200 rounded-xl p-4 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Grupo de treino</label><select id="training-group-select" class="w-full px-3 py-2 border border-slate-300 rounded-lg"></select></div>
+         <button id="add-training-group-btn" class="px-3 py-2 rounded-lg border border-slate-300 text-sm text-slate-700">+ Novo grupo</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Nome do grupo selecionado</label><input id="training-group-name" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Ex.: Adulto Masculino"></div>
+         <button id="delete-training-group-btn" class="px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm">Excluir grupo</button>
+        </div>
+        <div>
+         <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold text-slate-700">Atletas do grupo de treino</h3>
+          <button id="add-training-athlete-btn" class="px-3 py-2 rounded-lg border border-slate-300 text-sm text-slate-700">+ Atleta de treino</button>
+         </div>
+         <div id="training-group-athletes-list" class="space-y-2"></div>
+        </div>
        </div>
        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div><label class="block text-sm font-medium text-slate-600 mb-1">Data</label><input id="training-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg"></div>
@@ -963,10 +980,12 @@
         opponentAthletes: [],
         showOpponent: false,
         selectedMyTeamId: '',
-        selectedOpponentTeamId: ''
+        selectedOpponentTeamId: '',
+        selectedTrainingGroupId: ''
       },
       teamRegistry: [],
       athleteRegistry: [],
+      trainingGroups: [],
       trainings: [],
       lineup: {
         left: null,
@@ -1142,6 +1161,14 @@
       };
     }
 
+    function createEmptyTrainingGroup() {
+      return {
+        id: `training-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: 'Grupo de treino',
+        athletes: []
+      };
+    }
+
     function createEmptyTrainingDraft() {
       return {
         date: new Date().toISOString().slice(0, 10),
@@ -1160,6 +1187,31 @@
       };
     }
 
+    function normalizeTrainingGroup(group = {}) {
+      return {
+        id: String(group.id || `training-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+        name: String(group.name || 'Grupo de treino').trim() || 'Grupo de treino',
+        athletes: normalizeAthleteList(group.athletes || [])
+      };
+    }
+
+    function normalizeTrainingGroups(list) {
+      const groups = Array.isArray(list) ? list.map(normalizeTrainingGroup) : [];
+      return groups.length ? groups : [normalizeTrainingGroup({ id: 'training-group-default', name: 'Grupo padrão', athletes: [] })];
+    }
+
+    function ensureTrainingGroupsState() {
+      AppState.trainingGroups = normalizeTrainingGroups(AppState.trainingGroups);
+      if (!AppState.config.selectedTrainingGroupId || !AppState.trainingGroups.some(group => group.id === AppState.config.selectedTrainingGroupId)) {
+        AppState.config.selectedTrainingGroupId = AppState.trainingGroups[0]?.id || '';
+      }
+    }
+
+    function getSelectedTrainingGroup() {
+      ensureTrainingGroupsState();
+      return AppState.trainingGroups.find(group => group.id === AppState.config.selectedTrainingGroupId) || AppState.trainingGroups[0] || null;
+    }
+
     function normalizeTrainingItem(training = {}) {
       const activities = Array.isArray(training.activities) ? training.activities.map(normalizeTrainingActivity) : [];
       const validActivityIds = new Set(activities.map(activity => activity.id));
@@ -1175,6 +1227,7 @@
       return {
         id: String(training.id || `training-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
         date: String(training.date || '').slice(0, 10),
+        trainingGroupId: String(training.trainingGroupId || ''),
         type: String(training.type || '').trim(),
         notes: String(training.notes || '').trim(),
         activities,
@@ -1689,6 +1742,7 @@
         config: AppState.config,
         teamRegistry: AppState.teamRegistry,
         athleteRegistry: AppState.athleteRegistry,
+        trainingGroups: AppState.trainingGroups,
         trainings: AppState.trainings,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
@@ -1795,6 +1849,7 @@
         config: AppState.config,
         teamRegistry: AppState.teamRegistry,
         athleteRegistry: AppState.athleteRegistry,
+        trainingGroups: AppState.trainingGroups,
         trainings: AppState.trainings,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
@@ -1852,7 +1907,9 @@
       normalizeConfigAthletes();
       AppState.teamRegistry = normalizeTeamRegistry(payload.teamRegistry || AppState.teamRegistry);
       AppState.athleteRegistry = normalizeAthleteList(payload.athleteRegistry || AppState.athleteRegistry);
+      AppState.trainingGroups = normalizeTrainingGroups(payload.trainingGroups || AppState.trainingGroups);
       AppState.trainings = normalizeTrainings(payload.trainings || AppState.trainings);
+      ensureTrainingGroupsState();
       migrateLegacyTeams();
       rebuildGlobalAthleteRegistry();
       AppState.lineup = payload.lineup || AppState.lineup;
@@ -1932,7 +1989,9 @@
         normalizeConfigAthletes();
         AppState.teamRegistry = normalizeTeamRegistry(data.teamRegistry || AppState.teamRegistry);
         AppState.athleteRegistry = normalizeAthleteList(data.athleteRegistry || AppState.athleteRegistry);
+        AppState.trainingGroups = normalizeTrainingGroups(data.trainingGroups || AppState.trainingGroups);
         AppState.trainings = normalizeTrainings(data.trainings || AppState.trainings);
+        ensureTrainingGroupsState();
         migrateLegacyTeams();
         rebuildGlobalAthleteRegistry();
         AppState.lineup = data.lineup || AppState.lineup;
@@ -2016,6 +2075,7 @@
         config: activeData.config || AppState.config,
         teamRegistry: activeData.teamRegistry || AppState.teamRegistry,
         athleteRegistry: activeData.athleteRegistry || AppState.athleteRegistry,
+        trainingGroups: activeData.trainingGroups || AppState.trainingGroups,
         trainings: activeData.trainings || AppState.trainings,
         lineup: activeData.lineup || AppState.lineup,
         targetPlans: activeData.targetPlans || AppState.targetPlans,
@@ -5677,14 +5737,51 @@ function renderHeatmap(optionsOrFilter) {
     // =====================================================
 
     function getTrainingAthletes() {
-      rebuildGlobalAthleteRegistry();
-      return AppState.athleteRegistry.filter(hasAthleteIdentity);
+      const group = getSelectedTrainingGroup();
+      return normalizeAthleteList(group?.athletes || []).filter(hasAthleteIdentity);
+    }
+
+    function getTrainingAthleteLookup() {
+      const lookup = {};
+      normalizeTrainingGroups(AppState.trainingGroups).forEach((group) => {
+        normalizeAthleteList(group.athletes || []).forEach((athlete) => {
+          if (!athlete.id) return;
+          lookup[athlete.id] = athlete;
+        });
+      });
+      return lookup;
     }
 
     function getMeasureTypeInputHint(measureType) {
       if (measureType === 'tempo') return 'Ex.: 12.3 ou 01:12';
       if (measureType === 'observação') return 'Observação do atleta';
       return 'Resultado';
+    }
+
+    function renderTrainingGroupManagement() {
+      ensureTrainingGroupsState();
+      const selectedGroup = getSelectedTrainingGroup();
+      const select = document.getElementById('training-group-select');
+      const nameInput = document.getElementById('training-group-name');
+      const athletesList = document.getElementById('training-group-athletes-list');
+      if (select) {
+        select.innerHTML = AppState.trainingGroups.map(group => `<option value="${group.id}">${escapeHtml(group.name)}</option>`).join('');
+        select.value = selectedGroup?.id || '';
+      }
+      if (nameInput) nameInput.value = selectedGroup?.name || '';
+      if (!athletesList) return;
+      const athletes = normalizeAthleteList(selectedGroup?.athletes || []);
+      if (!athletes.length) {
+        athletesList.innerHTML = '<p class="text-sm text-slate-500">Nenhum atleta de treino cadastrado neste grupo.</p>';
+        return;
+      }
+      athletesList.innerHTML = athletes.map((athlete, idx) => `
+        <div class="grid grid-cols-1 md:grid-cols-[120px_1fr_auto] gap-2 items-center" data-training-athlete-row="${idx}">
+          <input type="text" class="training-group-athlete-number px-3 py-2 border border-slate-300 rounded-lg" placeholder="Número" data-index="${idx}" value="${escapeAttribute(athlete.number)}">
+          <input type="text" class="training-group-athlete-name px-3 py-2 border border-slate-300 rounded-lg" placeholder="Nome do atleta" data-index="${idx}" value="${escapeAttribute(athlete.name)}">
+          <button class="remove-training-athlete-btn px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm" data-index="${idx}">Remover</button>
+        </div>
+      `).join('');
     }
 
     function renderTrainingDraftActivities() {
@@ -5706,7 +5803,7 @@ function renderHeatmap(optionsOrFilter) {
       if (!container || !trainingDraftState) return;
       const athletes = getTrainingAthletes();
       if (!athletes.length) {
-        container.innerHTML = '<div class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">Cadastre atletas no sistema para lançar resultados de treino.</div>';
+        container.innerHTML = '<div class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">Cadastre atletas no grupo de treino para lançar resultados.</div>';
         return;
       }
       container.innerHTML = trainingDraftState.activities.map(activity => `
@@ -5784,7 +5881,7 @@ function renderHeatmap(optionsOrFilter) {
         return;
       }
 
-      const athletesById = Object.fromEntries(getTrainingAthletes().map(athlete => [athlete.id, athlete]));
+      const athletesById = getTrainingAthleteLookup();
       const grouped = filtered.reduce((acc, item) => {
         if (!acc[item.athleteId]) acc[item.athleteId] = [];
         acc[item.athleteId].push(item);
@@ -5826,6 +5923,7 @@ function renderHeatmap(optionsOrFilter) {
 
     function renderTrainingModule() {
       if (!trainingDraftState) trainingDraftState = createEmptyTrainingDraft();
+      ensureTrainingGroupsState();
       const dateInput = document.getElementById('training-date');
       const typeInput = document.getElementById('training-type');
       const notesInput = document.getElementById('training-notes');
@@ -5833,6 +5931,7 @@ function renderHeatmap(optionsOrFilter) {
       if (typeInput) typeInput.value = trainingDraftState.type || '';
       if (notesInput) notesInput.value = trainingDraftState.notes || '';
 
+      renderTrainingGroupManagement();
       renderTrainingDraftActivities();
       renderTrainingResultsGrid();
 
@@ -5863,7 +5962,7 @@ function renderHeatmap(optionsOrFilter) {
             <div class="border border-slate-200 rounded-lg p-3 flex items-center justify-between gap-2">
               <div>
                 <div class="font-medium text-slate-700">${escapeHtml(training.date)} • ${escapeHtml(training.type || 'Sem tipo')}</div>
-                <div class="text-xs text-slate-500">${training.activities.length} atividade(s) • ${training.results.length} resultado(s)</div>
+                <div class="text-xs text-slate-500">${training.activities.length} atividade(s) • ${training.results.length} resultado(s) • ${escapeHtml((AppState.trainingGroups.find(group => group.id === training.trainingGroupId)?.name) || 'Grupo não informado')}</div>
               </div>
               <button class="delete-training-btn px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm" data-training-id="${training.id}">Excluir</button>
             </div>
@@ -5875,6 +5974,11 @@ function renderHeatmap(optionsOrFilter) {
 
     function saveTraining() {
       if (!trainingDraftState) return;
+      const selectedGroup = getSelectedTrainingGroup();
+      if (!selectedGroup) {
+        showToast('⚠️ Cadastre um grupo de treino antes de salvar.');
+        return;
+      }
       const activities = trainingDraftState.activities
         .map(normalizeTrainingActivity)
         .filter(activity => activity.name);
@@ -5892,6 +5996,7 @@ function renderHeatmap(optionsOrFilter) {
       const training = normalizeTrainingItem({
         id: `training-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         date: trainingDraftState.date,
+        trainingGroupId: selectedGroup.id,
         type: trainingDraftState.type,
         notes: trainingDraftState.notes,
         activities,
@@ -5981,6 +6086,65 @@ function renderHeatmap(optionsOrFilter) {
         if (e.target.closest('.my-athlete-name, .my-athlete-number, .opp-athlete-name, .opp-athlete-number')) {
           updateConfigAthleteValidationHighlights();
         }
+      });
+
+      document.getElementById('training-group-select').addEventListener('change', (e) => {
+        ensureTrainingGroupsState();
+        AppState.config.selectedTrainingGroupId = e.target.value || AppState.trainingGroups[0]?.id || '';
+        renderTrainingModule();
+        saveToLocalStorage();
+      });
+      document.getElementById('add-training-group-btn').addEventListener('click', () => {
+        const newGroup = createEmptyTrainingGroup();
+        AppState.trainingGroups.push(newGroup);
+        AppState.config.selectedTrainingGroupId = newGroup.id;
+        renderTrainingModule();
+        saveToLocalStorage();
+      });
+      document.getElementById('delete-training-group-btn').addEventListener('click', () => {
+        ensureTrainingGroupsState();
+        if (AppState.trainingGroups.length <= 1) {
+          showToast('⚠️ É necessário manter pelo menos um grupo de treino.');
+          return;
+        }
+        AppState.trainingGroups = AppState.trainingGroups.filter(group => group.id !== AppState.config.selectedTrainingGroupId);
+        AppState.config.selectedTrainingGroupId = AppState.trainingGroups[0]?.id || '';
+        renderTrainingModule();
+        saveToLocalStorage();
+      });
+      document.getElementById('training-group-name').addEventListener('input', (e) => {
+        const selectedGroup = getSelectedTrainingGroup();
+        if (!selectedGroup) return;
+        selectedGroup.name = String(e.target.value || '').trim() || 'Grupo de treino';
+        renderTrainingGroupManagement();
+        saveToLocalStorage();
+      });
+      document.getElementById('add-training-athlete-btn').addEventListener('click', () => {
+        const selectedGroup = getSelectedTrainingGroup();
+        if (!selectedGroup) return;
+        selectedGroup.athletes.push(createEmptyAthleteDraft());
+        renderTrainingModule();
+        saveToLocalStorage();
+      });
+      document.getElementById('training-group-athletes-list').addEventListener('input', (e) => {
+        const idx = Number(e.target.dataset.index);
+        const selectedGroup = getSelectedTrainingGroup();
+        if (!selectedGroup || Number.isNaN(idx) || !selectedGroup.athletes[idx]) return;
+        if (e.target.classList.contains('training-group-athlete-name')) selectedGroup.athletes[idx].name = e.target.value;
+        if (e.target.classList.contains('training-group-athlete-number')) selectedGroup.athletes[idx].number = e.target.value;
+        renderTrainingResultsGrid();
+        renderTrainingAnalysis();
+        saveToLocalStorage();
+      });
+      document.getElementById('training-group-athletes-list').addEventListener('click', (e) => {
+        const btn = e.target.closest('.remove-training-athlete-btn');
+        if (!btn) return;
+        const idx = Number(btn.dataset.index);
+        const selectedGroup = getSelectedTrainingGroup();
+        if (!selectedGroup || Number.isNaN(idx)) return;
+        selectedGroup.athletes.splice(idx, 1);
+        renderTrainingModule();
+        saveToLocalStorage();
       });
 
       document.getElementById('add-training-activity').addEventListener('click', () => {
@@ -6984,6 +7148,7 @@ populateHeatmapAthletes();
         config: AppState.config,
         teamRegistry: AppState.teamRegistry,
         athleteRegistry: AppState.athleteRegistry,
+        trainingGroups: AppState.trainingGroups,
         trainings: AppState.trainings,
         lineup: AppState.lineup,
         targetPlans: AppState.targetPlans,
@@ -7014,7 +7179,9 @@ populateHeatmapAthletes();
           normalizeConfigAthletes();
           AppState.teamRegistry = normalizeTeamRegistry(parsed.teamRegistry || AppState.teamRegistry);
           AppState.athleteRegistry = normalizeAthleteList(parsed.athleteRegistry || AppState.athleteRegistry);
+          AppState.trainingGroups = normalizeTrainingGroups(parsed.trainingGroups || AppState.trainingGroups);
           AppState.trainings = normalizeTrainings(parsed.trainings || AppState.trainings);
+          ensureTrainingGroupsState();
           migrateLegacyTeams();
           rebuildGlobalAthleteRegistry();
           AppState.lineup = parsed.lineup || AppState.lineup;
@@ -7059,7 +7226,9 @@ populateHeatmapAthletes();
       normalizeLineupState();
       migrateLegacyTeams();
       AppState.athleteRegistry = normalizeAthleteList(AppState.athleteRegistry);
+      AppState.trainingGroups = normalizeTrainingGroups(AppState.trainingGroups);
       AppState.trainings = normalizeTrainings(AppState.trainings);
+      ensureTrainingGroupsState();
       rebuildGlobalAthleteRegistry();
       trainingDraftState = createEmptyTrainingDraft();
       loadConfigToForm();
