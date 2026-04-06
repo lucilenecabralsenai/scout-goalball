@@ -199,15 +199,17 @@
        </div>
        <div id="teams-empty-state" class="hidden text-sm text-slate-500 bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4 mb-4">Nenhuma equipe cadastrada ainda.</div>
        <div id="teams-management-list" class="space-y-3 mb-5"></div>
-       <div class="border-t border-slate-200 pt-5">
+       <div id="team-editor-panel" class="border-t border-slate-200 pt-5 rounded-xl">
         <div class="flex items-center justify-between gap-3 mb-4">
          <h3 id="team-editor-title" class="text-base font-semibold text-slate-800">Nova equipe</h3>
          <button id="cancel-team-edit" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 text-sm">Cancelar edição</button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
          <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">Nome da equipe</label><input id="team-form-name" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Ex.: APEC Campinas"></div>
          <div><label class="block text-sm font-medium text-slate-600 mb-1">Categoria</label><input id="team-form-category" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
-         <div class="md:col-span-3"><label class="block text-sm font-medium text-slate-600 mb-1">Cidade/Estado</label><input id="team-form-location" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
+         <div><label class="block text-sm font-medium text-slate-600 mb-1">Gênero</label><select id="team-form-gender" class="w-full px-3 py-2 border border-slate-300 rounded-lg"><option value="">Não definido</option><option value="masculino">Masculino</option><option value="feminino">Feminino</option></select></div>
+         <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">Cidade/UF</label><input id="team-form-location" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
+         <div class="md:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">Treinador</label><input id="team-form-coach" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg" placeholder="Opcional"></div>
         </div>
         <div class="flex items-center justify-between gap-3 mb-3">
          <h4 class="font-medium text-slate-700">Atletas</h4>
@@ -1199,6 +1201,7 @@
       other: ''
     };
     let teamEditorState = createEmptyTeamDraft();
+    const expandedTeamIds = new Set();
     const TRAINING_MEASURE_TYPES = ['tempo', 'quantidade', 'nota', 'acertos', 'carga', 'observação'];
     const MATCH_PHASES = ['pre_game', 'first_half', 'halftime', 'second_half', 'overtime_first_half', 'overtime_break', 'overtime_second_half', 'penalties', 'finished'];
     const PHASE_TO_LEGACY_PERIOD = {
@@ -1231,8 +1234,16 @@
         name: '',
         location: '',
         category: '',
+        coach: '',
+        gender: '',
         athletes: [createEmptyAthleteDraft()]
       };
+    }
+
+    function normalizeTeamGender(value) {
+      const normalized = String(value || '').trim().toLowerCase();
+      if (normalized === 'masculino' || normalized === 'feminino') return normalized;
+      return '';
     }
 
     function escapeAttribute(value) {
@@ -1272,6 +1283,8 @@
         name: String(team.name || '').trim(),
         location: String(team.location || team.cityState || '').trim(),
         category: String(team.category || '').trim(),
+        coach: String(team.coach || team.trainer || '').trim(),
+        gender: normalizeTeamGender(team.gender),
         athletes,
         createdAt: team.createdAt || new Date().toISOString(),
         updatedAt: team.updatedAt || new Date().toISOString()
@@ -1445,8 +1458,31 @@
       const parts = [];
       if (team.location) parts.push(team.location);
       if (team.category) parts.push(`Categoria: ${team.category}`);
+      if (team.coach) parts.push(`Treinador: ${team.coach}`);
       parts.push(`${team.athletes.length} atleta(s) cadastrado(s)`);
       return `Usando cadastro salvo. ${parts.join(' • ')}`;
+    }
+
+    function getTeamGenderStyle(gender) {
+      if (gender === 'masculino') {
+        return {
+          card: 'border-blue-200 bg-blue-50/40',
+          badge: 'bg-blue-100 text-blue-700 border-blue-200',
+          panel: 'border-blue-200 bg-blue-50/40'
+        };
+      }
+      if (gender === 'feminino') {
+        return {
+          card: 'border-pink-200 bg-pink-50/40',
+          badge: 'bg-pink-100 text-pink-700 border-pink-200',
+          panel: 'border-pink-200 bg-pink-50/40'
+        };
+      }
+      return {
+        card: 'border-slate-200 bg-white',
+        badge: 'bg-slate-100 text-slate-600 border-slate-200',
+        panel: 'border-slate-200 bg-white'
+      };
     }
 
     function sanitizeDuplicateNumbers(athletes) {
@@ -3993,26 +4029,37 @@
       if (!list || !emptyState) return;
       emptyState.classList.toggle('hidden', AppState.teamRegistry.length > 0);
       list.innerHTML = AppState.teamRegistry.map(team => {
-        const athletesCount = team.athletes.length;
-        const meta = [team.location, team.category].filter(Boolean).join(' • ');
+        const isExpanded = expandedTeamIds.has(team.id);
+        const styles = getTeamGenderStyle(team.gender);
+        const genderLabel = team.gender ? team.gender[0].toUpperCase() + team.gender.slice(1) : 'Não definido';
+        const cityState = team.location || 'Cidade/UF não informado';
         return `
-          <div class="border border-slate-200 rounded-xl p-4">
-            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-              <div>
-                <div class="font-semibold text-slate-800">${escapeHtml(team.name || 'Sem nome')}</div>
-                <div class="text-sm text-slate-500">${escapeHtml(meta || 'Sem cidade/estado e categoria')}</div>
-                <div class="text-xs text-slate-400 mt-1">${athletesCount} atleta(s)</div>
+          <div class="border rounded-xl p-3 ${styles.card}">
+            <button class="team-expand-btn w-full text-left" data-team-id="${team.id}">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="font-semibold text-slate-800 truncate">${escapeHtml(team.name || 'Sem nome')}</div>
+                  <div class="text-sm text-slate-500 truncate">${escapeHtml(cityState)}</div>
+                </div>
+                <div class="text-slate-500 text-xs">${isExpanded ? '▲' : '▼'}</div>
               </div>
-              <div class="flex flex-wrap gap-2">
-                <button class="team-use-btn px-3 py-2 rounded-lg border border-blue-200 text-blue-700 text-sm" data-team-id="${team.id}" data-side="my">Usar na minha equipe</button>
-                <button class="team-use-btn px-3 py-2 rounded-lg border border-rose-200 text-rose-700 text-sm" data-team-id="${team.id}" data-side="opponent">Usar no adversário</button>
-                <button class="team-edit-btn px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm" data-team-id="${team.id}">Editar</button>
+            </button>
+            <div class="${isExpanded ? 'mt-3' : 'hidden'}">
+              <div class="flex flex-wrap gap-2 text-xs mb-3">
+                <span class="px-2 py-1 rounded-full border ${styles.badge}">Gênero: ${escapeHtml(genderLabel)}</span>
+                <span class="px-2 py-1 rounded-full border border-slate-200 bg-white text-slate-600">Categoria: ${escapeHtml(team.category || 'Não definida')}</span>
+                <span class="px-2 py-1 rounded-full border border-slate-200 bg-white text-slate-600">Treinador: ${escapeHtml(team.coach || 'Não informado')}</span>
               </div>
-            </div>
-            <div class="mt-3 flex flex-wrap gap-2">
-              ${team.athletes.length
-                ? team.athletes.map(athlete => `<span class="px-3 py-1 bg-slate-50 rounded-full text-xs border border-slate-200">${escapeHtml(formatAthleteDisplay(athlete))}</span>`).join('')
-                : '<span class="text-xs text-slate-400">Sem atletas cadastrados.</span>'}
+              <div class="mt-2 flex flex-wrap gap-2">
+                ${team.athletes.length
+                  ? team.athletes.map(athlete => `<span class="px-3 py-1 bg-white rounded-full text-xs border border-slate-200">${escapeHtml(formatAthleteDisplay(athlete))}</span>`).join('')
+                  : '<span class="text-xs text-slate-400">Sem atletas cadastrados.</span>'}
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button class="team-use-btn px-3 py-2 rounded-lg border border-blue-200 text-blue-700 text-sm bg-white" data-team-id="${team.id}" data-side="my">Usar na minha equipe</button>
+                <button class="team-use-btn px-3 py-2 rounded-lg border border-rose-200 text-rose-700 text-sm bg-white" data-team-id="${team.id}" data-side="opponent">Usar no adversário</button>
+                <button class="team-edit-btn px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm bg-white" data-team-id="${team.id}">Editar</button>
+              </div>
             </div>
           </div>
         `;
@@ -4025,7 +4072,15 @@
       document.getElementById('team-form-name').value = teamEditorState.name || '';
       document.getElementById('team-form-location').value = teamEditorState.location || '';
       document.getElementById('team-form-category').value = teamEditorState.category || '';
+      document.getElementById('team-form-coach').value = teamEditorState.coach || '';
+      document.getElementById('team-form-gender').value = teamEditorState.gender || '';
       document.getElementById('delete-team-btn').classList.toggle('hidden', !teamEditorState.id);
+      const editorPanel = document.getElementById('team-editor-panel');
+      if (editorPanel) {
+        const styles = getTeamGenderStyle(teamEditorState.gender);
+        editorPanel.classList.remove('border-blue-200', 'bg-blue-50/40', 'border-pink-200', 'bg-pink-50/40', 'border-slate-200', 'bg-white');
+        editorPanel.classList.add(...styles.panel.split(' '));
+      }
       const warning = document.getElementById('team-form-duplicate-warning');
       const validation = getTeamAthleteValidation(teamEditorState.athletes);
       const duplicates = sanitizeDuplicateNumbers(teamEditorState.athletes.filter(hasAthleteIdentity));
@@ -4104,6 +4159,8 @@
         name: team.name,
         location: team.location,
         category: team.category,
+        coach: team.coach || '',
+        gender: team.gender || '',
         athletes: team.athletes.map(athlete => ({ ...athlete }))
       };
       renderTeamEditor();
@@ -4123,6 +4180,8 @@
         name: document.getElementById('team-form-name').value,
         location: document.getElementById('team-form-location').value,
         category: document.getElementById('team-form-category').value,
+        coach: document.getElementById('team-form-coach').value,
+        gender: document.getElementById('team-form-gender').value,
         athletes,
         updatedAt: new Date().toISOString()
       });
@@ -4232,12 +4291,14 @@
           updatedAt: new Date().toISOString()
         };
       } else {
-        AppState.teamRegistry.unshift({
+        const createdTeam = {
           ...team,
           id: team.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           createdAt: team.createdAt || new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        });
+        };
+        AppState.teamRegistry.unshift(createdTeam);
+        expandedTeamIds.add(createdTeam.id);
       }
 
       const selectedSides = [
@@ -4265,6 +4326,7 @@
       const confirmed = window.confirm(`Excluir a equipe "${team.name}"?`);
       if (!confirmed) return;
       AppState.teamRegistry = AppState.teamRegistry.filter(item => item.id !== teamId);
+      expandedTeamIds.delete(teamId);
       if (AppState.config.selectedMyTeamId === teamId) clearSavedTeamSelection('my');
       if (AppState.config.selectedOpponentTeamId === teamId) clearSavedTeamSelection('opponent');
       renderSavedTeamSelectors();
@@ -6759,8 +6821,16 @@ function renderHeatmap(optionsOrFilter) {
       });
 
       document.getElementById('teams-management-list').addEventListener('click', (e) => {
+        const expandBtn = e.target.closest('.team-expand-btn');
         const editBtn = e.target.closest('.team-edit-btn');
         const useBtn = e.target.closest('.team-use-btn');
+        if (expandBtn) {
+          const teamId = expandBtn.dataset.teamId;
+          if (expandedTeamIds.has(teamId)) expandedTeamIds.delete(teamId);
+          else expandedTeamIds.add(teamId);
+          renderTeamManagement();
+          return;
+        }
         if (editBtn) loadTeamIntoEditor(editBtn.dataset.teamId);
         if (useBtn) applySavedTeamToConfig(useBtn.dataset.teamId, useBtn.dataset.side);
       });
@@ -6778,9 +6848,10 @@ function renderHeatmap(optionsOrFilter) {
         refreshTeamEditorValidationFromDom();
       });
 
-      ['team-form-name', 'team-form-location', 'team-form-category'].forEach(id => {
+      ['team-form-name', 'team-form-location', 'team-form-category', 'team-form-coach', 'team-form-gender'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
           teamEditorState = collectTeamEditorData();
+          if (id === 'team-form-gender') renderTeamEditor();
         });
       });
       
