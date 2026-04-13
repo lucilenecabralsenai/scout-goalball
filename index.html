@@ -7118,15 +7118,40 @@ function renderHeatmap(optionsOrFilter) {
     function parseCompetitionImportPayload(rawText) {
       const parsed = JSON.parse(rawText);
       const source = parsed?.competition && typeof parsed.competition === 'object' ? parsed.competition : parsed;
-      const teamsRaw = Array.isArray(source.teams) ? source.teams : [];
-      const groupsRaw = Array.isArray(source.groups || source.chaves || source.keys) ? (source.groups || source.chaves || source.keys) : [];
+      const groupsSource = source.groups || source.chaves || source.keys;
+      const groupsRaw = [];
+      if (Array.isArray(groupsSource)) {
+        groupsRaw.push(...groupsSource);
+      } else if (groupsSource && typeof groupsSource === 'object') {
+        Object.entries(groupsSource).forEach(([outerKey, value]) => {
+          if (Array.isArray(value)) {
+            groupsRaw.push({ name: outerKey, teams: value });
+            return;
+          }
+          if (value && typeof value === 'object') {
+            Object.entries(value).forEach(([innerKey, teams]) => {
+              if (!Array.isArray(teams)) return;
+              const maybeCategory = normalizeCompetitionCategory(outerKey);
+              groupsRaw.push({ name: innerKey, category: maybeCategory, teams });
+            });
+          }
+        });
+      }
       const scheduleRaw = Array.isArray(source.schedule || source.games || source.cronograma)
         ? (source.schedule || source.games || source.cronograma)
         : [];
+      const teamsRaw = Array.isArray(source.teams) ? source.teams : [];
       const teams = teamsRaw
         .map((team) => (typeof team === 'string' ? { name: team } : team))
         .map(normalizeCompetitionTeam)
         .filter((team) => team.name);
+      const groups = groupsRaw.map(normalizeCompetitionGroup).filter((group) => group.name);
+      const teamsFromGroups = groups.flatMap((group) => (group.teams || []).map((name) => normalizeCompetitionTeam({ name, category: group.category })));
+      const teamsFromSchedule = scheduleRaw.flatMap((game) => {
+        const category = normalizeCompetitionCategory(game?.category);
+        return [normalizeCompetitionTeam({ name: game?.teamA, category }), normalizeCompetitionTeam({ name: game?.teamB, category })];
+      });
+
       return {
         metadata: {
           name: String(source.name || '').trim(),
@@ -7145,14 +7170,16 @@ function renderHeatmap(optionsOrFilter) {
           endDate: Object.prototype.hasOwnProperty.call(source, 'endDate'),
           notes: Object.prototype.hasOwnProperty.call(source, 'notes')
         },
-        teams,
-        groups: groupsRaw.map(normalizeCompetitionGroup).filter((group) => group.name),
+        teams: mergeCompetitionTeams(teams, [...teamsFromGroups, ...teamsFromSchedule]),
+        groups,
         schedule: scheduleRaw.map(normalizeCompetitionGame)
       };
     }
 
-    function importCompetitionFromJson(rawText) {
-      const payload = parseCompetitionImportPayload(rawText);
+    function importCompetition(data) {
+      const payload = typeof data === 'string'
+        ? parseCompetitionImportPayload(data)
+        : parseCompetitionImportPayload(JSON.stringify(data || {}));
       if (!payload.metadata.name) throw new Error('JSON sem nome da competição.');
       if (normalizeNameKey(payload.metadata.name) === normalizeNameKey('Regional Nordeste 2026')) {
         const baseData = getRegionalNordeste2026BaseData();
@@ -7192,6 +7219,10 @@ function renderHeatmap(optionsOrFilter) {
       if (previous) AppState.competitions = AppState.competitions.map((item) => item.id === competition.id ? competition : item);
       else AppState.competitions.unshift(competition);
       return { competition, createdTeams, reusedTeams };
+    }
+
+    function importCompetitionFromJson(rawText) {
+      return importCompetition(rawText);
     }
 
     function renderCompetitions() {
