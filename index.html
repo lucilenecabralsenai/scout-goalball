@@ -7066,22 +7066,38 @@ function renderHeatmap(optionsOrFilter) {
     }
 
     function getRegionalNordeste2026BaseData() {
+      const groups = [
+        { name: 'Masculino - Chave A', category: 'masculino', teams: ['APACE', 'ACSB', 'ACACE', 'ADESUL', 'SORTEIO 1'] },
+        { name: 'Masculino - Chave B', category: 'masculino', teams: ['ADEVIRN', 'CEDEMAC', 'ASDEV', 'APEDVA', 'SORTEIO 2'] },
+        { name: 'Masculino - Chave C', category: 'masculino', teams: ['ASSOBECER', 'ICB', 'IERC', 'AMPE', 'SORTEIO 3'] },
+        { name: 'Masculino - Chave D', category: 'masculino', teams: ['CRP', 'APEC', 'ADEVISE', 'IAPQ', 'SORTEIO 4'] },
+        { name: 'Feminino - Chave A', category: 'feminino', teams: ['ICB', 'CRP', 'IAPQ', 'AJECE', 'SORTEIO 1'] },
+        { name: 'Feminino - Chave B', category: 'feminino', teams: ['ADEVIRN', 'IERC', 'APEC', 'ADESUL', 'SORTEIO 2'] }
+      ];
+      const schedule = [];
+      let gameNumber = 1;
+      groups.forEach((group) => {
+        const teams = Array.isArray(group.teams) ? group.teams : [];
+        for (let i = 0; i < teams.length; i += 1) {
+          for (let j = i + 1; j < teams.length; j += 1) {
+            schedule.push(normalizeCompetitionGame({
+              gameNumber: String(gameNumber),
+              date: '',
+              time: '',
+              teamA: teams[i],
+              teamB: teams[j],
+              phase: group.name,
+              category: group.category
+            }));
+            gameNumber += 1;
+          }
+        }
+      });
+      const teams = collectCompetitionTeamsFromStructure(groups, schedule);
       return {
-        groups: [
-          { name: 'Masculino - Chave A', category: 'masculino', teams: ['APACE', 'ACSB', 'ACACE', 'ADESUL', 'SORTEIO 1'] },
-          { name: 'Masculino - Chave B', category: 'masculino', teams: ['ADEVIRN', 'CEDEMAC', 'ASDEV', 'APEDVA', 'SORTEIO 2'] },
-          { name: 'Masculino - Chave C', category: 'masculino', teams: ['ASSOBECER', 'ICB', 'IERC', 'AMPE', 'SORTEIO 3'] },
-          { name: 'Masculino - Chave D', category: 'masculino', teams: ['CRP', 'APEC', 'ADEVISE', 'IAPQ', 'SORTEIO 4'] },
-          { name: 'Feminino - Chave A', category: 'feminino', teams: ['ICB', 'CRP', 'IAPQ', 'AJECE', 'SORTEIO 1'] },
-          { name: 'Feminino - Chave B', category: 'feminino', teams: ['ADEVIRN', 'IERC', 'APEC', 'ADESUL', 'SORTEIO 2'] }
-        ],
-        teams: [
-          'APACE', 'ACSB', 'ACACE', 'ADESUL', 'SORTEIO 1',
-          'ADEVIRN', 'CEDEMAC', 'ASDEV', 'APEDVA', 'SORTEIO 2',
-          'ASSOBECER', 'ICB', 'IERC', 'AMPE', 'SORTEIO 3',
-          'CRP', 'APEC', 'ADEVISE', 'IAPQ', 'SORTEIO 4',
-          'AJECE'
-        ].map((name) => normalizeCompetitionTeam({ name }))
+        groups,
+        teams,
+        schedule
       };
     }
 
@@ -7185,6 +7201,7 @@ function renderHeatmap(optionsOrFilter) {
         const baseData = getRegionalNordeste2026BaseData();
         payload.groups = mergeCompetitionGroups(payload.groups, baseData.groups);
         payload.teams = mergeCompetitionTeams(payload.teams, baseData.teams);
+        payload.schedule = mergeCompetitionSchedule(baseData.schedule, payload.schedule);
       }
       const structureTeams = collectCompetitionTeamsFromStructure(payload.groups, payload.schedule);
       payload.teams = mergeCompetitionTeams(payload.teams, structureTeams);
@@ -7210,15 +7227,37 @@ function renderHeatmap(optionsOrFilter) {
 
       let createdTeams = 0;
       let reusedTeams = 0;
+      const createdTeamNames = [];
+      const reusedTeamNames = [];
+      const failedTeams = [];
       competition.teams.forEach((team) => {
-        const action = upsertCompetitionTeamInRegistry(team);
-        if (action === 'created') createdTeams += 1;
-        if (action === 'reused') reusedTeams += 1;
+        try {
+          const action = upsertCompetitionTeamInRegistry(team);
+          if (action === 'created') {
+            createdTeams += 1;
+            createdTeamNames.push(team.name);
+          }
+          if (action === 'reused') {
+            reusedTeams += 1;
+            reusedTeamNames.push(team.name);
+          }
+          if (!action) failedTeams.push(team.name || '(sem nome)');
+        } catch (error) {
+          failedTeams.push(team.name || '(sem nome)');
+        }
       });
       rebuildGlobalAthleteRegistry();
       if (previous) AppState.competitions = AppState.competitions.map((item) => item.id === competition.id ? competition : item);
       else AppState.competitions.unshift(competition);
-      return { competition, createdTeams, reusedTeams };
+      return {
+        competition,
+        createdTeams,
+        reusedTeams,
+        createdTeamNames,
+        reusedTeamNames,
+        failedTeams,
+        totalImportedTeams: competition.teams.length
+      };
     }
 
     function importCompetitionFromJson(rawText) {
@@ -7542,7 +7581,13 @@ function renderHeatmap(optionsOrFilter) {
           return;
         }
         try {
-          const { competition, createdTeams, reusedTeams } = importCompetitionFromJson(rawText);
+          const {
+            competition,
+            createdTeams,
+            reusedTeams,
+            totalImportedTeams,
+            failedTeams
+          } = importCompetitionFromJson(rawText);
           document.getElementById('competition-form-name').value = competition.name || '';
           document.getElementById('competition-form-location').value = competition.location || '';
           document.getElementById('competition-form-city').value = competition.cityState || '';
@@ -7557,7 +7602,8 @@ function renderHeatmap(optionsOrFilter) {
           renderCompetitions();
           renderCompetitionSelectors();
           saveToLocalStorage();
-          showToast(`✅ Importação concluída: ${competition.name}. Equipes criadas: ${createdTeams}; reaproveitadas: ${reusedTeams}.`);
+          const failedCount = Array.isArray(failedTeams) ? failedTeams.length : 0;
+          showToast(`✅ Importação concluída: ${competition.name}. Total: ${totalImportedTeams}; criadas: ${createdTeams}; reaproveitadas: ${reusedTeams}; falhas: ${failedCount}.`);
         } catch (error) {
           console.error('Importação de competição falhou:', error);
           showToast(`⚠️ Falha na importação: ${error.message || 'JSON inválido.'}`);
