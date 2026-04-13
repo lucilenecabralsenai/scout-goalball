@@ -251,6 +251,22 @@
         <button id="competition-save-btn" class="px-4 py-2 rounded-lg btn-success text-white text-sm">💾 Salvar competição</button>
         <button id="competition-delete-btn" class="px-4 py-2 rounded-lg btn-danger text-white text-sm hidden">🗑️ Excluir competição</button>
        </div>
+       <div class="mt-4 border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+         <h3 class="text-sm font-semibold text-slate-700">Importação em lote (JSON)</h3>
+         <button id="competition-import-btn" class="px-3 py-1.5 rounded-lg btn-primary text-white text-xs">📥 Importar</button>
+        </div>
+        <p class="text-xs text-slate-500">Aceita dados da competição, equipes, chaves e cronograma. Os nomes são preservados exatamente como enviados.</p>
+        <textarea id="competition-import-json" rows="8" class="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono text-xs" placeholder='{"name":"Regional Nordeste 2026","location":"...","cityState":"...","startDate":"2026-04-26","endDate":"2026-05-02","teams":[{"name":"SORTEIO 1"}],"groups":[{"name":"Chave A","teams":["1 Chave A","2 Chave A"]}],"schedule":[{"gameNumber":"1","date":"2026-04-26","time":"08:00","teamA":"SORTEIO 1","teamB":"SORTEIO 2","phase":"Chave A","category":"masculino"}]}'>{
+  "name": "Regional Nordeste 2026",
+  "location": "Estadual da Prata - Rua Duque de Caxias, S/N - Prata",
+  "cityState": "Campina Grande/PB",
+  "hotel": "",
+  "startDate": "2026-04-26",
+  "endDate": "2026-05-02",
+  "notes": "Cronograma extraído do PDF interno da CBDV."
+}</textarea>
+       </div>
       </div>
       <div id="competitions-list" class="space-y-3"></div>
      </div>
@@ -1348,6 +1364,17 @@
       };
     }
 
+    function normalizeCompetitionGroup(group = {}) {
+      const sourceTeams = Array.isArray(group.teams) ? group.teams : [];
+      return {
+        id: String(group.id || `comp-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+        name: String(group.name || group.key || group.chave || '').trim(),
+        category: normalizeCompetitionCategory(group.category),
+        teams: sourceTeams.map((team) => String(typeof team === 'string' ? team : team?.name || '').trim()).filter(Boolean),
+        notes: String(group.notes || '').trim()
+      };
+    }
+
     function normalizeCompetitionGame(game = {}) {
       return {
         id: String(game.id || `comp-game-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
@@ -1374,6 +1401,9 @@
         endDate: String(item.endDate || '').slice(0, 10),
         notes: String(item.notes || '').trim(),
         teams: Array.isArray(item.teams) ? item.teams.map(normalizeCompetitionTeam).filter((team) => team.name) : [],
+        groups: Array.isArray(item.groups || item.chaves || item.keys)
+          ? (item.groups || item.chaves || item.keys).map(normalizeCompetitionGroup).filter((group) => group.name)
+          : [],
         schedule: Array.isArray(item.schedule) ? item.schedule.map(normalizeCompetitionGame) : [],
         createdAt: item.createdAt || new Date().toISOString(),
         updatedAt: item.updatedAt || new Date().toISOString()
@@ -6936,6 +6966,164 @@ function renderHeatmap(optionsOrFilter) {
       document.getElementById('competition-delete-btn').classList.add('hidden');
     }
 
+    function normalizeNameKey(value) {
+      return String(value || '').trim().toLocaleLowerCase('pt-BR');
+    }
+
+    function mergeCompetitionTeams(existingTeams = [], incomingTeams = []) {
+      const merged = [...existingTeams.map(normalizeCompetitionTeam)];
+      const byName = new Map(merged.map((team) => [normalizeNameKey(team.name), team]));
+      incomingTeams.map(normalizeCompetitionTeam).forEach((team) => {
+        const key = normalizeNameKey(team.name);
+        if (!key) return;
+        const existing = byName.get(key);
+        if (!existing) {
+          merged.push(team);
+          byName.set(key, team);
+          return;
+        }
+        if (!existing.cityState && team.cityState) existing.cityState = team.cityState;
+        if (!existing.coach && team.coach) existing.coach = team.coach;
+        if (!existing.category && team.category) existing.category = team.category;
+        if (!existing.notes && team.notes) existing.notes = team.notes;
+        if (!existing.athletes.length && team.athletes.length) existing.athletes = team.athletes;
+      });
+      return merged;
+    }
+
+    function mergeCompetitionGroups(existingGroups = [], incomingGroups = []) {
+      const merged = [...existingGroups.map(normalizeCompetitionGroup)];
+      const byName = new Map(merged.map((group) => [normalizeNameKey(group.name), group]));
+      incomingGroups.map(normalizeCompetitionGroup).forEach((group) => {
+        const key = normalizeNameKey(group.name);
+        if (!key) return;
+        const existing = byName.get(key);
+        if (!existing) {
+          merged.push(group);
+          byName.set(key, group);
+          return;
+        }
+        if (!existing.category && group.category) existing.category = group.category;
+        if (!existing.notes && group.notes) existing.notes = group.notes;
+        const seenTeams = new Set((existing.teams || []).map(normalizeNameKey));
+        (group.teams || []).forEach((teamName) => {
+          const teamKey = normalizeNameKey(teamName);
+          if (!teamKey || seenTeams.has(teamKey)) return;
+          existing.teams.push(teamName);
+          seenTeams.add(teamKey);
+        });
+      });
+      return merged;
+    }
+
+    function mergeCompetitionSchedule(existingSchedule = [], incomingSchedule = []) {
+      const merged = [...existingSchedule.map(normalizeCompetitionGame)];
+      const makeKey = (game) => [
+        normalizeNameKey(game.gameNumber),
+        normalizeNameKey(game.date),
+        normalizeNameKey(game.time),
+        normalizeNameKey(game.teamA),
+        normalizeNameKey(game.teamB),
+        normalizeNameKey(game.phase)
+      ].join('|');
+      const keys = new Set(merged.map(makeKey));
+      incomingSchedule.map(normalizeCompetitionGame).forEach((game) => {
+        const key = makeKey(game);
+        if (keys.has(key)) return;
+        merged.push(game);
+        keys.add(key);
+      });
+      return merged;
+    }
+
+    function upsertCompetitionTeamInRegistry(team) {
+      const normalizedTeam = normalizeCompetitionTeam(team);
+      if (!normalizedTeam.name) return;
+      const key = normalizeNameKey(normalizedTeam.name);
+      const existing = AppState.teamRegistry.find((item) => normalizeNameKey(item.name) === key);
+      if (existing) {
+        if (!existing.location && normalizedTeam.cityState) existing.location = normalizedTeam.cityState;
+        if (!existing.coach && normalizedTeam.coach) existing.coach = normalizedTeam.coach;
+        if (!existing.category && normalizedTeam.category) existing.category = normalizedTeam.category;
+        if (!existing.athletes?.length && normalizedTeam.athletes.length) existing.athletes = normalizedTeam.athletes;
+        existing.updatedAt = new Date().toISOString();
+        return;
+      }
+      AppState.teamRegistry.unshift(normalizeTeam({
+        name: normalizedTeam.name,
+        location: normalizedTeam.cityState,
+        coach: normalizedTeam.coach,
+        category: normalizedTeam.category,
+        athletes: normalizedTeam.athletes
+      }));
+    }
+
+    function parseCompetitionImportPayload(rawText) {
+      const parsed = JSON.parse(rawText);
+      const source = parsed?.competition && typeof parsed.competition === 'object' ? parsed.competition : parsed;
+      const teamsRaw = Array.isArray(source.teams) ? source.teams : [];
+      const groupsRaw = Array.isArray(source.groups || source.chaves || source.keys) ? (source.groups || source.chaves || source.keys) : [];
+      const scheduleRaw = Array.isArray(source.schedule || source.games || source.cronograma)
+        ? (source.schedule || source.games || source.cronograma)
+        : [];
+      const teams = teamsRaw
+        .map((team) => (typeof team === 'string' ? { name: team } : team))
+        .map(normalizeCompetitionTeam)
+        .filter((team) => team.name);
+      return {
+        metadata: {
+          name: String(source.name || '').trim(),
+          location: String(source.location || '').trim(),
+          cityState: String(source.cityState || source.city || '').trim(),
+          hotel: String(source.hotel || '').trim(),
+          startDate: String(source.startDate || '').slice(0, 10),
+          endDate: String(source.endDate || '').slice(0, 10),
+          notes: String(source.notes || '').trim()
+        },
+        providedFields: {
+          location: Object.prototype.hasOwnProperty.call(source, 'location'),
+          cityState: Object.prototype.hasOwnProperty.call(source, 'cityState') || Object.prototype.hasOwnProperty.call(source, 'city'),
+          hotel: Object.prototype.hasOwnProperty.call(source, 'hotel'),
+          startDate: Object.prototype.hasOwnProperty.call(source, 'startDate'),
+          endDate: Object.prototype.hasOwnProperty.call(source, 'endDate'),
+          notes: Object.prototype.hasOwnProperty.call(source, 'notes')
+        },
+        teams,
+        groups: groupsRaw.map(normalizeCompetitionGroup).filter((group) => group.name),
+        schedule: scheduleRaw.map(normalizeCompetitionGame)
+      };
+    }
+
+    function importCompetitionFromJson(rawText) {
+      const payload = parseCompetitionImportPayload(rawText);
+      if (!payload.metadata.name) throw new Error('JSON sem nome da competição.');
+      const editingId = document.getElementById('competition-save-btn').dataset.editingId || '';
+      const foundById = AppState.competitions.find((competition) => competition.id === editingId);
+      const foundByName = AppState.competitions.find((competition) => normalizeNameKey(competition.name) === normalizeNameKey(payload.metadata.name));
+      const previous = foundById || foundByName || null;
+
+      const competition = normalizeCompetition({
+        id: previous?.id,
+        name: payload.metadata.name,
+        location: payload.providedFields.location ? payload.metadata.location : (previous?.location || ''),
+        cityState: payload.providedFields.cityState ? payload.metadata.cityState : (previous?.cityState || ''),
+        hotel: payload.providedFields.hotel ? payload.metadata.hotel : (previous?.hotel || ''),
+        startDate: payload.providedFields.startDate ? payload.metadata.startDate : (previous?.startDate || ''),
+        endDate: payload.providedFields.endDate ? payload.metadata.endDate : (previous?.endDate || ''),
+        notes: payload.providedFields.notes ? payload.metadata.notes : (previous?.notes || ''),
+        teams: mergeCompetitionTeams(previous?.teams || [], payload.teams),
+        groups: mergeCompetitionGroups(previous?.groups || [], payload.groups),
+        schedule: mergeCompetitionSchedule(previous?.schedule || [], payload.schedule),
+        createdAt: previous?.createdAt
+      });
+
+      competition.teams.forEach((team) => upsertCompetitionTeamInRegistry(team));
+      rebuildGlobalAthleteRegistry();
+      if (previous) AppState.competitions = AppState.competitions.map((item) => item.id === competition.id ? competition : item);
+      else AppState.competitions.unshift(competition);
+      return competition;
+    }
+
     function renderCompetitions() {
       const list = document.getElementById('competitions-list');
       if (!list) return;
@@ -6954,6 +7142,15 @@ function renderHeatmap(optionsOrFilter) {
             </div>
           </details>
         `).join('') || '<p class="text-xs text-slate-400">Sem equipes cadastradas.</p>';
+        const groups = (competition.groups || []).map((group) => `
+          <details class="border border-slate-200 rounded-lg p-2">
+            <summary class="cursor-pointer list-none flex items-center justify-between gap-2"><span class="font-medium text-sm">${escapeHtml(group.name)}</span><span class="text-xs text-slate-500">${escapeHtml(group.category || '-')}</span></summary>
+            <div class="mt-2 text-xs text-slate-600">
+              <div class="mb-1">${escapeHtml(group.notes || 'Sem observações')}</div>
+              <div>${group.teams.length ? group.teams.map((teamName) => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200">${escapeHtml(teamName)}</span>`).join('') : 'Sem equipes na chave'}</div>
+            </div>
+          </details>
+        `).join('') || '<p class="text-xs text-slate-400">Sem chaves cadastradas.</p>';
         const schedule = (competition.schedule || []).map((game) => `
           <tr class="border-b border-slate-100">
             <td class="py-1">${escapeHtml(game.gameNumber || '-')}</td>
@@ -6982,6 +7179,7 @@ function renderHeatmap(optionsOrFilter) {
               <div><h4 class="text-xs font-semibold text-slate-600 mb-1">Equipes (${competition.teams.length})</h4><div class="space-y-2">${teams}</div></div>
               <div><h4 class="text-xs font-semibold text-slate-600 mb-1">Scouts vinculados (${linkedScouts.length})</h4><div class="text-xs text-slate-600 space-y-1">${linkedScouts.map((match) => `<div>• ${escapeHtml(formatMatchLabel(match))} ${match.matchRecordType ? `(${escapeHtml(match.matchRecordType)})` : ''}</div>`).join('') || 'Nenhum scout vinculado.'}</div></div>
             </div>
+            <div><h4 class="text-xs font-semibold text-slate-600 mb-1">Chaves (${(competition.groups || []).length})</h4><div class="space-y-2">${groups}</div></div>
             <div class="overflow-auto">
               <table class="w-full text-xs">
                 <thead><tr class="text-left text-slate-500"><th>#</th><th>Data/Hora</th><th>Jogo</th><th>Fase</th><th>Categoria</th><th>Placar</th><th></th></tr></thead>
@@ -7207,6 +7405,7 @@ function renderHeatmap(optionsOrFilter) {
           endDate: document.getElementById('competition-form-end').value,
           notes: document.getElementById('competition-form-notes').value,
           teams: previous?.teams || [],
+          groups: previous?.groups || [],
           schedule: previous?.schedule || [],
           createdAt: previous?.createdAt
         });
@@ -7233,6 +7432,35 @@ function renderHeatmap(optionsOrFilter) {
         renderCompetitions();
         renderCompetitionSelectors();
         saveToLocalStorage();
+      });
+      document.getElementById('competition-import-btn').addEventListener('click', () => {
+        const input = document.getElementById('competition-import-json');
+        const rawText = String(input?.value || '').trim();
+        if (!rawText) {
+          showToast('⚠️ Cole um JSON válido para importar.');
+          return;
+        }
+        try {
+          const competition = importCompetitionFromJson(rawText);
+          document.getElementById('competition-form-name').value = competition.name || '';
+          document.getElementById('competition-form-location').value = competition.location || '';
+          document.getElementById('competition-form-city').value = competition.cityState || '';
+          document.getElementById('competition-form-hotel').value = competition.hotel || '';
+          document.getElementById('competition-form-start').value = competition.startDate || '';
+          document.getElementById('competition-form-end').value = competition.endDate || '';
+          document.getElementById('competition-form-notes').value = competition.notes || '';
+          document.getElementById('competition-save-btn').dataset.editingId = competition.id;
+          document.getElementById('competition-delete-btn').classList.remove('hidden');
+          renderTeamManagement();
+          renderConfigTeamSelectors();
+          renderCompetitions();
+          renderCompetitionSelectors();
+          saveToLocalStorage();
+          showToast(`✅ Importação concluída: ${competition.name}.`);
+        } catch (error) {
+          console.error('Importação de competição falhou:', error);
+          showToast(`⚠️ Falha na importação: ${error.message || 'JSON inválido.'}`);
+        }
       });
       document.getElementById('competitions-list').addEventListener('click', (e) => {
         const editBtn = e.target.closest('.comp-edit');
