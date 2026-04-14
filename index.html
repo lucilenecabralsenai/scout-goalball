@@ -7345,17 +7345,30 @@ function renderHeatmap(optionsOrFilter) {
       return (competition.groups || []).find((group) => normalizeNameKey(group.name) === key) || null;
     }
 
-    function getCompetitionGamesWithValidScore(competition) {
-      if (!Array.isArray(competition?.schedule)) return [];
-      return sortCompetitionSchedule(competition.schedule).map((game) => {
+    function getCompetitionGamesWithScoreDiagnostics(competition) {
+      if (!Array.isArray(competition?.schedule)) {
+        return {
+          validGames: [],
+          ignoredGames: []
+        };
+      }
+      const validGames = [];
+      const ignoredGames = [];
+      sortCompetitionSchedule(competition.schedule).forEach((game) => {
         const scoreA = parseCompetitionScore(game.scoreA);
         const scoreB = parseCompetitionScore(game.scoreB);
-        return {
-          game,
-          scoreA,
-          scoreB
-        };
-      }).filter((entry) => entry.scoreA !== null && entry.scoreB !== null);
+        if (scoreA === null || scoreB === null) {
+          ignoredGames.push({
+            gameId: game.id,
+            gameNumber: game.gameNumber || '',
+            teams: `${game.teamA || '(sem equipe A)'} x ${game.teamB || '(sem equipe B)'}`,
+            reason: `placar inválido ou incompleto (scoreA="${game.scoreA ?? ''}", scoreB="${game.scoreB ?? ''}")`
+          });
+          return;
+        }
+        validGames.push({ game, scoreA, scoreB });
+      });
+      return { validGames, ignoredGames };
     }
 
     function buildCompetitionStandings(competition) {
@@ -7367,9 +7380,17 @@ function renderHeatmap(optionsOrFilter) {
       const teams = new Map();
       const teamCategoriesByName = new Map();
       const diagnostics = {
+        competitionId: competition?.id || '',
+        competitionName: competition?.name || '',
         totalGamesInSchedule: Array.isArray(competition?.schedule) ? competition.schedule.length : 0,
         gamesWithValidScore: 0,
         gamesUsedInStandings: 0,
+        validScoreGameNumbers: [],
+        usedGameNumbers: [],
+        ignoredGameNumbers: [],
+        maleGamesUsed: 0,
+        femaleGamesUsed: 0,
+        ineligibleMaleGamesIncludedInOfficialTable: [],
         ignoredGames: []
       };
 
@@ -7427,8 +7448,10 @@ function renderHeatmap(optionsOrFilter) {
       });
       (competition.teams || []).forEach((team) => ensureTeam(team.name, team.category, ''));
 
-      const validScoredGames = getCompetitionGamesWithValidScore(competition);
+      const { validGames: validScoredGames, ignoredGames: invalidScoreGames } = getCompetitionGamesWithScoreDiagnostics(competition);
       diagnostics.gamesWithValidScore = validScoredGames.length;
+      diagnostics.validScoreGameNumbers = validScoredGames.map(({ game }) => String(game.gameNumber || game.id || '').trim()).filter(Boolean);
+      diagnostics.ignoredGames.push(...invalidScoreGames);
 
       validScoredGames.forEach(({ game, scoreA, scoreB }) => {
         const group = getCompetitionGroupByName(competition, game.phase);
@@ -7440,11 +7463,12 @@ function renderHeatmap(optionsOrFilter) {
         const category = categoryFromGame || categoryFromGroup || categoryFromTeams;
         const groupName = group?.name || '';
 
-        const teamA = ensureTeam(game.teamA, category, groupName);
-        const teamB = ensureTeam(game.teamB, category, groupName);
+        let teamA = ensureTeam(game.teamA, category, groupName);
+        let teamB = ensureTeam(game.teamB, category, groupName);
         if (!teamA || !teamB) {
           diagnostics.ignoredGames.push({
             gameId: game.id,
+            gameNumber: game.gameNumber || '',
             teams: `${game.teamA || '(sem equipe A)'} x ${game.teamB || '(sem equipe B)'}`,
             reason: 'equipe inválida, ausente ou marcador temporário',
             scoreA,
@@ -7452,9 +7476,14 @@ function renderHeatmap(optionsOrFilter) {
           });
           return;
         }
+        if (teamA.category !== teamB.category && category) {
+          teamA = ensureTeam(game.teamA, category, groupName);
+          teamB = ensureTeam(game.teamB, category, groupName);
+        }
         if (!teamA.category || !teamB.category) {
           diagnostics.ignoredGames.push({
             gameId: game.id,
+            gameNumber: game.gameNumber || '',
             teams: `${teamA.name} x ${teamB.name}`,
             reason: `categoria indefinida (jogo="${game.category || ''}", fase="${game.phase || ''}")`,
             scoreA,
@@ -7465,6 +7494,7 @@ function renderHeatmap(optionsOrFilter) {
         if (teamA.category !== teamB.category) {
           diagnostics.ignoredGames.push({
             gameId: game.id,
+            gameNumber: game.gameNumber || '',
             teams: `${teamA.name} (${teamA.category}) x ${teamB.name} (${teamB.category})`,
             reason: 'categorias divergentes entre as equipes',
             scoreA,
@@ -7473,6 +7503,9 @@ function renderHeatmap(optionsOrFilter) {
           return;
         }
         diagnostics.gamesUsedInStandings += 1;
+        if (teamA.category === 'masculino') diagnostics.maleGamesUsed += 1;
+        if (teamA.category === 'feminino') diagnostics.femaleGamesUsed += 1;
+        diagnostics.usedGameNumbers.push(String(game.gameNumber || game.id || '').trim());
 
         teamA.games += 1;
         teamB.games += 1;
@@ -7512,13 +7545,70 @@ function renderHeatmap(optionsOrFilter) {
           h2h[teamA.key].points += 1;
           h2h[teamB.key].points += 1;
         }
+
+        const involvesSerieBIneligibleTeam =
+          isSerieB2026IneligibleTeam(teamA.name, teamA.category) ||
+          isSerieB2026IneligibleTeam(teamB.name, teamB.category);
+        if (teamA.category === 'masculino' && involvesSerieBIneligibleTeam) {
+          diagnostics.ineligibleMaleGamesIncludedInOfficialTable.push({
+            gameId: game.id,
+            gameNumber: game.gameNumber || '',
+            teams: `${teamA.name} x ${teamB.name}`,
+            score: `${scoreA}x${scoreB}`,
+            category: teamA.category,
+            note: 'Jogo incluído na classificação oficial; inelegibilidade só vale para projeção da Série B.'
+          });
+        }
+
+        console.debug('[Competições][Cálculo jogo]', {
+          competitionId: competition?.id || '',
+          competitionName: competition?.name || '',
+          gameId: game.id,
+          gameNumber: game.gameNumber || '',
+          category: teamA.category,
+          groupName,
+          officialTableUpdated: `standings.${teamA.category}`,
+          teamA: {
+            name: teamA.name,
+            games: teamA.games,
+            wins: teamA.wins,
+            draws: teamA.draws,
+            losses: teamA.losses,
+            goalsFor: teamA.goalsFor,
+            goalsAgainst: teamA.goalsAgainst,
+            goalDiff: teamA.goalsFor - teamA.goalsAgainst,
+            points: teamA.points
+          },
+          teamB: {
+            name: teamB.name,
+            games: teamB.games,
+            wins: teamB.wins,
+            draws: teamB.draws,
+            losses: teamB.losses,
+            goalsFor: teamB.goalsFor,
+            goalsAgainst: teamB.goalsAgainst,
+            goalDiff: teamB.goalsFor - teamB.goalsAgainst,
+            points: teamB.points
+          }
+        });
       });
 
+      diagnostics.ignoredGameNumbers = diagnostics.ignoredGames
+        .map((entry) => String(entry.gameNumber || entry.gameId || '').trim())
+        .filter(Boolean);
+
       console.debug('[Competições] Diagnóstico de classificação', {
-        competition: competition?.name || '',
+        competitionId: diagnostics.competitionId,
+        competition: diagnostics.competitionName,
         totalGamesInSchedule: diagnostics.totalGamesInSchedule,
         gamesWithValidScore: diagnostics.gamesWithValidScore,
+        validScoreGameNumbers: diagnostics.validScoreGameNumbers,
         gamesUsedInStandings: diagnostics.gamesUsedInStandings,
+        usedGameNumbers: diagnostics.usedGameNumbers,
+        ignoredGameNumbers: diagnostics.ignoredGameNumbers,
+        maleGamesUsed: diagnostics.maleGamesUsed,
+        femaleGamesUsed: diagnostics.femaleGamesUsed,
+        ineligibleMaleGamesIncludedInOfficialTable: diagnostics.ineligibleMaleGamesIncludedInOfficialTable,
         ignoredGames: diagnostics.ignoredGames
       });
 
@@ -7737,6 +7827,16 @@ function renderHeatmap(optionsOrFilter) {
         return;
       }
       list.innerHTML = AppState.competitions.map((competition) => {
+        const cacheSnapshot = readStateFromCache();
+        const cacheCompetition = cacheSnapshot?.competitions?.find((item) => item.id === competition.id);
+        console.debug('[Competições][Estado/cache]', {
+          competitionId: competition.id,
+          competitionName: competition.name,
+          inMemoryUpdatedAt: competition.updatedAt || '',
+          cacheUpdatedAt: cacheCompetition?.updatedAt || '',
+          inMemoryScheduleGames: Array.isArray(competition.schedule) ? competition.schedule.length : 0,
+          cacheScheduleGames: Array.isArray(cacheCompetition?.schedule) ? cacheCompetition.schedule.length : 0
+        });
         const linkedScouts = getCompetitionLinkedScouts(competition.id);
         const standings = buildCompetitionStandings(competition);
         const maleGroups = [...standings.masculino.byGroup.entries()];
@@ -8220,11 +8320,50 @@ function renderHeatmap(optionsOrFilter) {
           const competition = AppState.competitions.find((item) => item.id === resultBtn.dataset.id);
           const game = competition?.schedule.find((item) => item.id === resultBtn.dataset.gameId);
           if (!game) return;
-          game.scoreA = prompt('Placar equipe A:', game.scoreA || '') || '';
-          game.scoreB = prompt('Placar equipe B:', game.scoreB || '') || '';
+          const nextScoreA = prompt('Placar equipe A:', game.scoreA || '');
+          const nextScoreB = prompt('Placar equipe B:', game.scoreB || '');
+          game.scoreA = nextScoreA ?? '';
+          game.scoreB = nextScoreB ?? '';
           competition.updatedAt = new Date().toISOString();
+          console.debug('[Competições][Salvar resultado] payload antes de persistir', {
+            competitionId: competition.id,
+            competitionName: competition.name,
+            gameId: game.id,
+            gameNumber: game.gameNumber || '',
+            teamA: game.teamA || '',
+            teamB: game.teamB || '',
+            category: game.category || '',
+            goalsA: game.scoreA,
+            goalsB: game.scoreB
+          });
           renderCompetitions();
           saveToLocalStorage();
+          const persistedCompetition = AppState.competitions.find((item) => item.id === competition.id);
+          const persistedGame = persistedCompetition?.schedule?.find((item) => item.id === game.id);
+          const cacheSnapshot = readStateFromCache();
+          const cacheGame = cacheSnapshot?.competitions
+            ?.find((item) => item.id === competition.id)
+            ?.schedule?.find((item) => item.id === game.id);
+          console.debug('[Competições][Salvar resultado] confirmação de persistência', {
+            inMemory: persistedGame
+              ? {
+                competitionId: persistedCompetition.id,
+                gameId: persistedGame.id,
+                gameNumber: persistedGame.gameNumber || '',
+                goalsA: persistedGame.scoreA ?? '',
+                goalsB: persistedGame.scoreB ?? ''
+              }
+              : null,
+            localCache: cacheGame
+              ? {
+                competitionId: competition.id,
+                gameId: cacheGame.id,
+                gameNumber: cacheGame.gameNumber || '',
+                goalsA: cacheGame.scoreA ?? '',
+                goalsB: cacheGame.scoreB ?? ''
+              }
+              : null
+          });
         }
       });
       
