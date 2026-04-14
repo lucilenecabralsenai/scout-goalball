@@ -7345,6 +7345,19 @@ function renderHeatmap(optionsOrFilter) {
       return (competition.groups || []).find((group) => normalizeNameKey(group.name) === key) || null;
     }
 
+    function getCompetitionGamesWithValidScore(competition) {
+      if (!Array.isArray(competition?.schedule)) return [];
+      return sortCompetitionSchedule(competition.schedule).map((game) => {
+        const scoreA = parseCompetitionScore(game.scoreA);
+        const scoreB = parseCompetitionScore(game.scoreB);
+        return {
+          game,
+          scoreA,
+          scoreB
+        };
+      }).filter((entry) => entry.scoreA !== null && entry.scoreB !== null);
+    }
+
     function buildCompetitionStandings(competition) {
       const standingsByCategory = {
         masculino: { byGroup: new Map(), overall: [] },
@@ -7414,7 +7427,10 @@ function renderHeatmap(optionsOrFilter) {
       });
       (competition.teams || []).forEach((team) => ensureTeam(team.name, team.category, ''));
 
-      sortCompetitionSchedule(competition.schedule || []).forEach((game) => {
+      const validScoredGames = getCompetitionGamesWithValidScore(competition);
+      diagnostics.gamesWithValidScore = validScoredGames.length;
+
+      validScoredGames.forEach(({ game, scoreA, scoreB }) => {
         const group = getCompetitionGroupByName(competition, game.phase);
         const categoryFromGame = normalizeCompetitionCategory(game.category);
         const categoryFromGroup = normalizeCompetitionCategory(group?.category);
@@ -7423,10 +7439,6 @@ function renderHeatmap(optionsOrFilter) {
         const categoryFromTeams = categoryFromTeamA && categoryFromTeamA === categoryFromTeamB ? categoryFromTeamA : '';
         const category = categoryFromGame || categoryFromGroup || categoryFromTeams;
         const groupName = group?.name || '';
-        const scoreA = parseCompetitionScore(game.scoreA);
-        const scoreB = parseCompetitionScore(game.scoreB);
-        if (scoreA === null || scoreB === null) return;
-        diagnostics.gamesWithValidScore += 1;
 
         const teamA = ensureTeam(game.teamA, category, groupName);
         const teamB = ensureTeam(game.teamB, category, groupName);
@@ -7658,6 +7670,13 @@ function renderHeatmap(optionsOrFilter) {
       return SERIE_B_2026_MALE_INELIGIBLE_TEAM_KEYS.has(normalizeNameKey(teamName));
     }
 
+    function buildSerieB2026EligibleRanking(maleOverall = []) {
+      // IMPORTANTE:
+      // A inelegibilidade da Série B se aplica somente à projeção da vaga.
+      // A classificação oficial do campeonato (buildCompetitionStandings) não deve usar este filtro.
+      return maleOverall.filter((team) => !isSerieB2026IneligibleTeam(team.name, 'masculino'));
+    }
+
     function buildSerieB2026Projection(competition, maleOverall = []) {
       const messages = [];
       if (!maleOverall.length) {
@@ -7668,7 +7687,7 @@ function renderHeatmap(optionsOrFilter) {
         };
       }
 
-      const eligibleRanking = maleOverall.filter((team) => !isSerieB2026IneligibleTeam(team.name, 'masculino'));
+      const eligibleRanking = buildSerieB2026EligibleRanking(maleOverall);
       const eligibleTeam = eligibleRanking[0] || null;
       const threatTeam = eligibleRanking[1] || null;
 
