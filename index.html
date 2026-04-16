@@ -2628,7 +2628,7 @@
         updateSyncStatus('syncing');
         try {
           const localCache = readStateFromCache(user.uid);
-          //const { loaded, remoteState } = await loadMatchesFromFirestore(user);
+          const { loaded, remoteState } = await loadMatchesFromFirestore(user);
           if (!loaded && localCache) {
             console.info('[SYNC] Firestore sem dados remotos, aplicando cache local');
             applyStateFromSource(localCache, 'local-fallback-no-remote');
