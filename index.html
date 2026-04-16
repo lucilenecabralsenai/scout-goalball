@@ -2741,7 +2741,11 @@
       AppState.events = [...sdkEvents];
       saveToLocalStorage();
     }
-
+   
+function purgeTemporaryCompetitionSlotsFromRegistry() {
+  // função temporária para evitar erro
+  return;
+}
 
     function getTeamBaseName(team) {
       return team === 'my'
