@@ -2193,6 +2193,46 @@
       return Array.from(list, (athlete) => normalizeAthlete(athlete));
     }
 
+    function normalizeTeamCategoryData(entry = {}) {
+      const source = entry && typeof entry === 'object' ? entry : {};
+      const athletesSource = Array.isArray(source.athletes) ? source.athletes : [];
+      return {
+        coach: String(source.coach || '').trim(),
+        athletes: athletesSource.map((athlete) => {
+          if (typeof athlete === 'string') return normalizeAthlete({ name: athlete });
+          return normalizeAthlete(athlete);
+        })
+      };
+    }
+
+    function buildNormalizedTeamCategories(team = {}, fallbackAthletes = [], fallbackCoach = '') {
+      const rawCategories = team?.categories && typeof team.categories === 'object' ? team.categories : {};
+      const masculino = normalizeTeamCategoryData(rawCategories.masculino);
+      const feminino = normalizeTeamCategoryData(rawCategories.feminino);
+      const preferredCategory = normalizeCompetitionCategory(team.gender || team.category);
+      const fallbackAthleteList = normalizeAthleteList(fallbackAthletes);
+      const fallbackCoachText = String(fallbackCoach || '').trim();
+      const applyFallback = (categoryEntry) => {
+        if (!categoryEntry.coach && fallbackCoachText) categoryEntry.coach = fallbackCoachText;
+        if (!categoryEntry.athletes.length && fallbackAthleteList.length) categoryEntry.athletes = fallbackAthleteList;
+      };
+      if (preferredCategory === 'masculino') applyFallback(masculino);
+      if (preferredCategory === 'feminino') applyFallback(feminino);
+      return { masculino, feminino };
+    }
+
+    function hasInvalidTeamCategoryStructure(team = {}) {
+      const categories = team?.categories;
+      if (!categories || typeof categories !== 'object') return true;
+      return ['masculino', 'feminino'].some((category) => {
+        const entry = categories?.[category];
+        if (!entry || typeof entry !== 'object') return true;
+        if (!Array.isArray(entry.athletes)) return true;
+        if (typeof entry.coach !== 'string') return true;
+        return false;
+      });
+    }
+
     function normalizeConfigAthletes() {
       AppState.config.myAthletes = normalizeAthleteList(AppState.config.myAthletes);
       AppState.config.opponentAthletes = normalizeAthleteList(AppState.config.opponentAthletes);
@@ -2200,23 +2240,39 @@
 
     function normalizeTeam(team = {}) {
       const athletes = Array.isArray(team.athletes) ? team.athletes.map(normalizeAthlete) : [];
+      const legacyCoach = String(team.coach || team.trainer || '').trim();
+      const categories = buildNormalizedTeamCategories(team, athletes, legacyCoach);
       return {
         id: team.id || `team-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: String(team.name || '').trim(),
         location: String(team.location || team.cityState || '').trim(),
+        state: String(team.state || '').trim(),
         category: String(team.category || '').trim(),
-        coach: String(team.coach || team.trainer || '').trim(),
+        coach: legacyCoach,
         gender: normalizeTeamGender(team.gender),
         athletes,
+        categories,
         createdAt: team.createdAt || new Date().toISOString(),
         updatedAt: team.updatedAt || new Date().toISOString()
       };
     }
 
-    function normalizeTeamRegistry(list) {
-      return Array.isArray(list)
-        ? list.map(normalizeTeam).filter(team => team.name || team.athletes.some(a => a.name || a.number))
-        : [];
+    function normalizeTeamRegistry(list, options = {}) {
+      const report = { correctedCount: 0, correctedTeams: [] };
+      if (!Array.isArray(list)) return options.withReport ? { teams: [], report } : [];
+      const teams = list
+        .map((team) => {
+          if (hasInvalidTeamCategoryStructure(team)) {
+            report.correctedCount += 1;
+            report.correctedTeams.push(String(team?.name || '(sem nome)').trim());
+          }
+          return normalizeTeam(team);
+        })
+        .filter(team => team.name || team.athletes.some(a => a.name || a.number));
+      if (!options.withReport) return teams;
+      report.correctedTeams = [...new Set(report.correctedTeams)];
+      report.correctedCount = report.correctedTeams.length;
+      return { teams, report };
     }
 
     function normalizeCompetitionCategory(value) {
@@ -8330,6 +8386,8 @@ function renderHeatmap(optionsOrFilter) {
           failedTeams.push(team.name || '(sem nome)');
         }
       });
+      const normalizationResult = normalizeTeamRegistry(AppState.teamRegistry, { withReport: true });
+      AppState.teamRegistry = normalizationResult.teams;
       rebuildGlobalAthleteRegistry();
       if (previous) AppState.competitions = AppState.competitions.map((item) => item.id === competition.id ? competition : item);
       else AppState.competitions.unshift(competition);
@@ -8344,7 +8402,8 @@ function renderHeatmap(optionsOrFilter) {
         totalImportedGames: competition.schedule.length,
         removedAutomaticGames,
         replacedImportedGames,
-        removedTemporaryTeams
+        removedTemporaryTeams,
+        teamNormalizationReport: normalizationResult.report
       };
     }
 
@@ -9463,7 +9522,8 @@ function renderHeatmap(optionsOrFilter) {
             removedAutomaticGames,
             replacedImportedGames,
             failedTeams,
-            removedTemporaryTeams
+            removedTemporaryTeams,
+            teamNormalizationReport
           } = importCompetitionFromJson(rawText);
           document.getElementById('competition-form-name').value = competition.name || '';
           document.getElementById('competition-form-location').value = competition.location || '';
@@ -9481,7 +9541,14 @@ function renderHeatmap(optionsOrFilter) {
           saveToLocalStorage();
           const failedCount = Array.isArray(failedTeams) ? failedTeams.length : 0;
           const removedSlotsCount = Array.isArray(removedTemporaryTeams) ? removedTemporaryTeams.length : 0;
-          showToast(`✅ Importação concluída: ${competition.name}. Equipes: ${totalImportedTeams} (criadas: ${createdTeams}; reaproveitadas: ${reusedTeams}); jogos importados: ${totalImportedGames}; jogos antigos removidos: ${removedAutomaticGames + replacedImportedGames}; marcadores removidos do cadastro: ${removedSlotsCount}; falhas: ${failedCount}.`);
+          const correctedTeams = Array.isArray(teamNormalizationReport?.correctedTeams) ? teamNormalizationReport.correctedTeams : [];
+          const correctedCount = Number(teamNormalizationReport?.correctedCount || 0);
+          const correctedPreview = correctedTeams.slice(0, 6).join(', ');
+          const correctedSuffix = correctedTeams.length > 6 ? ` e +${correctedTeams.length - 6}` : '';
+          const correctedLabel = correctedCount
+            ? `normalização de equipes: ${correctedCount}${correctedPreview ? ` (${correctedPreview}${correctedSuffix})` : ''}`
+            : 'normalização de equipes: 0';
+          showToast(`✅ Importação concluída: ${competition.name}. Equipes: ${totalImportedTeams} (criadas: ${createdTeams}; reaproveitadas: ${reusedTeams}); jogos importados: ${totalImportedGames}; jogos antigos removidos: ${removedAutomaticGames + replacedImportedGames}; marcadores removidos do cadastro: ${removedSlotsCount}; ${correctedLabel}; falhas: ${failedCount}.`);
         } catch (error) {
           console.error('Importação de competição falhou:', error);
           showToast(`⚠️ Falha na importação: ${error.message || 'JSON inválido.'}`);
