@@ -7484,8 +7484,10 @@ function renderHeatmap(optionsOrFilter) {
       return parsed;
     }
 
+    const MAX_SAFE_QUOTIENT = 999.99;
+
     function safeQuotient(goalsFor, goalsAgainst) {
-      if (goalsAgainst === 0) return goalsFor > 0 ? Number.POSITIVE_INFINITY : 0;
+      if (goalsAgainst === 0) return goalsFor > 0 ? MAX_SAFE_QUOTIENT : 0;
       return goalsFor / goalsAgainst;
     }
 
@@ -7520,6 +7522,7 @@ function renderHeatmap(optionsOrFilter) {
         const groupKey = `${normalizeCompetitionCategory(group.category) || 'indefinido'}::${normalizeNameKey(group.name)}`;
         const teams = (group.teams || []).map((name) => ({
           team: name,
+          gamesPlayed: 0,
           points: 0,
           wins: 0,
           draws: 0,
@@ -7560,6 +7563,8 @@ function renderHeatmap(optionsOrFilter) {
         if (!rowA || !rowB) return;
 
         groupEntry.games.push(game);
+        rowA.gamesPlayed += 1;
+        rowB.gamesPlayed += 1;
         rowA.goalsFor += scoreA;
         rowA.goalsAgainst += scoreB;
         rowB.goalsFor += scoreB;
@@ -7655,10 +7660,15 @@ function renderHeatmap(optionsOrFilter) {
                 <th class="py-1 pr-2">#</th>
                 <th class="py-1 pr-2">Equipe</th>
                 ${withGroup ? '<th class="py-1 pr-2">Grupo</th>' : ''}
-                <th class="py-1 pr-2">Pts</th>
+                <th class="py-1 pr-2">J</th>
                 <th class="py-1 pr-2">V</th>
+                <th class="py-1 pr-2">E</th>
+                <th class="py-1 pr-2">D</th>
+                <th class="py-1 pr-2">GP</th>
+                <th class="py-1 pr-2">GC</th>
                 <th class="py-1 pr-2">SG</th>
                 <th class="py-1 pr-2">Q</th>
+                <th class="py-1 pr-2">PTS</th>
               </tr>
             </thead>
             <tbody>
@@ -7667,10 +7677,15 @@ function renderHeatmap(optionsOrFilter) {
                   <td class="py-1 pr-2">${row.rank ?? row.projectionRank ?? '-'}</td>
                   <td class="py-1 pr-2 font-medium">${escapeHtml(row.team)}</td>
                   ${withGroup ? `<td class="py-1 pr-2">${escapeHtml(row.group || '-')}</td>` : ''}
-                  <td class="py-1 pr-2">${row.points}</td>
+                  <td class="py-1 pr-2">${row.gamesPlayed}</td>
                   <td class="py-1 pr-2">${row.wins}</td>
+                  <td class="py-1 pr-2">${row.draws}</td>
+                  <td class="py-1 pr-2">${row.losses}</td>
+                  <td class="py-1 pr-2">${row.goalsFor}</td>
+                  <td class="py-1 pr-2">${row.goalsAgainst}</td>
                   <td class="py-1 pr-2">${row.goalDiff}</td>
-                  <td class="py-1 pr-2">${Number.isFinite(row.quotient) ? row.quotient.toFixed(2) : '∞'}</td>
+                  <td class="py-1 pr-2">${row.quotient.toFixed(2)}</td>
+                  <td class="py-1 pr-2">${row.points}</td>
                 </tr>
               `).join('')}
             </tbody>
