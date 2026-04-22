@@ -2454,6 +2454,16 @@
       }
     }
 
+    async function clearActiveMatchReferenceInCloud() {
+      if (!firestoreDb || !AppState.auth.user?.uid) return;
+      await setDoc(doc(collection(firestoreDb, 'users'), AppState.auth.user.uid), {
+        email: AppState.auth.user.email || '',
+        ownerEmail: AppState.auth.user.email || '',
+        lastActiveMatchId: null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
     function enqueueCloudSync(reason = '') {
       if (suppressCloudSync || !AppState.auth.user || !firestoreDb) return;
       if (!AppState.matchId) {
@@ -3791,6 +3801,14 @@ function purgeTemporaryCompetitionSlotsFromRegistry() {
       resetRequestControl();
       AppState.targetPlans = {};
       AppState.currentTargets = {};
+      attackSmartDefaults = {
+        ballType: '',
+        gameSituation: 'Livre'
+      };
+      targetChangeState = {
+        athlete: '',
+        newTargets: []
+      };
       const historySelect = document.getElementById('history-match-select');
       if (historySelect) historySelect.value = 'current';
       const historyFilter = document.getElementById('history-filter');
@@ -3810,6 +3828,42 @@ function purgeTemporaryCompetitionSlotsFromRegistry() {
       renderMatchControlPanel();
       updateCourtSideDisplay();
       updatePossessionDisplay();
+    }
+
+    function resetActiveMatchConfiguration() {
+      AppState.config = {
+        ...AppState.config,
+        competition: '',
+        location: '',
+        date: '',
+        notes: '',
+        myTeam: '',
+        opponentTeam: '',
+        myAthletes: [],
+        opponentAthletes: [],
+        showOpponent: false,
+        selectedMyTeamId: '',
+        selectedOpponentTeamId: '',
+        linkedCompetitionId: '',
+        linkedScheduleGameId: '',
+        matchRecordType: ''
+      };
+      AppState.lineup.myInitialSide = 'left';
+    }
+
+    function resetOperationalTabsAfterMatchFinalization() {
+      resetActiveMatchConfiguration();
+      resetCurrentMatchState();
+      normalizeConfigAthletes();
+      loadConfigToForm();
+      renderSavedTeamSelectors();
+      renderCompetitionSelectors();
+      updateLineupSelectors();
+      updateLineupDisplay();
+      renderGameOnCourtSummary();
+      renderMatchControlPanel();
+      renderRecentEvents();
+      updateScore();
     }
 
     async function startNewMatch() {
@@ -4255,13 +4309,15 @@ function purgeTemporaryCompetitionSlotsFromRegistry() {
 
       try {
         await finalizeMatchInCloud(previousMatchId);
+        await clearActiveMatchReferenceInCloud();
       } catch (error) {
         console.warn('[SYNC] Não foi possível marcar a partida encerrada no Firebase', error);
         saveToLocalStorage();
         showToast('⚠️ Partida encerrada e salva localmente. Firebase indisponível no momento.');
       }
+
       AppState.matchId = null;
-      resetCurrentMatchState();
+      resetOperationalTabsAfterMatchFinalization();
       saveToLocalStorage();
       renderHistoryMatchSelector();
       renderReportMatchSelector();
@@ -4275,7 +4331,7 @@ function purgeTemporaryCompetitionSlotsFromRegistry() {
       renderHistory();
       updateAllStats();
       renderRecentEvents();
-      showToast('🏁 Partida encerrada e salva!');
+      showToast('🏁 Partida encerrada e limpa de todas as abas operacionais!');
       enqueueCloudSync('end-match');
     }
 
