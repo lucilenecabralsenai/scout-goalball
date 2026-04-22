@@ -2520,6 +2520,12 @@
       return new Set(AppState.sync.pendingFinalizations || []);
     }
 
+    function isMatchMarkedAsFinishedLocally(matchId) {
+      if (!matchId) return false;
+      if (getPendingFinalizationSet().has(matchId)) return true;
+      return (AppState.archivedMatches || []).some((match) => match.id === matchId && match.status === 'ended');
+    }
+
     function markPendingFinalization(matchId) {
       if (!matchId) return;
       const pending = getPendingFinalizationSet();
@@ -2583,7 +2589,13 @@
         ...pendingFinalizations
       ].filter(Boolean))];
       sdkEvents = Array.isArray(payload.events) ? payload.events.map(normalizeStoredEvent) : sdkEvents;
+      if (isMatchMarkedAsFinishedLocally(AppState.matchId)) {
+        AppState.matchId = null;
+      }
       AppState.events = [...sdkEvents];
+      if (!AppState.matchId) {
+        resetCurrentMatchState();
+      }
       validateLineupIndices();
       suppressCloudSync = false;
       console.info(`[SYNC] Estado aplicado da fonte: ${source}`, { matchId: AppState.matchId, events: AppState.events.length });
@@ -2730,26 +2742,26 @@
       }
 
       const activeMatch = matchDocs.find((d) => {
+        if (isMatchMarkedAsFinishedLocally(d.id)) return false;
         const status = d.data()?.status;
         return status === 'live' || status === 'draft';
       }) || null;
 
-      const fallbackData = matchDocs[0]?.data() || {};
-      const activeData = activeMatch?.data() || fallbackData;
+      const activeData = activeMatch?.data() || null;
       const remoteState = {
-        updatedAt: toEpochMs(activeData.updatedAt),
+        updatedAt: toEpochMs(activeData?.updatedAt),
         matchId: activeMatch?.id || null,
-        config: activeData.config || AppState.config,
-        teamRegistry: activeData.teamRegistry || AppState.teamRegistry,
-        athleteRegistry: activeData.athleteRegistry || AppState.athleteRegistry,
-        trainingGroups: activeData.trainingGroups || AppState.trainingGroups,
-        trainings: activeData.trainings || AppState.trainings,
-        competitions: activeData.competitions || AppState.competitions,
-        lineup: activeData.lineup || AppState.lineup,
-        matchControl: activeData.matchControl || AppState.matchControl,
-        targetPlans: activeData.targetPlans || AppState.targetPlans,
-        currentTargets: activeData.currentTargets || AppState.currentTargets,
-        matchRules: activeData.matchRules || AppState.matchRules,
+        config: activeData?.config || AppState.config,
+        teamRegistry: activeData?.teamRegistry || AppState.teamRegistry,
+        athleteRegistry: activeData?.athleteRegistry || AppState.athleteRegistry,
+        trainingGroups: activeData?.trainingGroups || AppState.trainingGroups,
+        trainings: activeData?.trainings || AppState.trainings,
+        competitions: activeData?.competitions || AppState.competitions,
+        lineup: activeData?.lineup || AppState.lineup,
+        matchControl: activeData?.matchControl || AppState.matchControl,
+        targetPlans: activeData?.targetPlans || AppState.targetPlans,
+        currentTargets: activeData?.currentTargets || AppState.currentTargets,
+        matchRules: activeData?.matchRules || AppState.matchRules,
         archivedMatches: archived,
         events: allEvents
       };
@@ -2772,7 +2784,12 @@
         if (!remoteMatches.length) return;
 
         const hasCurrentMatchRemotely = remoteMatches.some((match) => match.id === AppState.matchId);
-        const liveMatch = remoteMatches.find((m) => m.status === 'live' || m.status === 'draft') || null;
+        const pendingFinalizations = getPendingFinalizationSet();
+        const liveMatch = remoteMatches.find((m) => (
+          (m.status === 'live' || m.status === 'draft')
+          && !pendingFinalizations.has(m.id)
+          && !isMatchMarkedAsFinishedLocally(m.id)
+        )) || null;
         if (!hasCurrentMatchRemotely && liveMatch?.id && liveMatch.id !== AppState.matchId) {
           AppState.matchId = liveMatch.id;
           subscribeToCurrentMatch();
@@ -2799,7 +2816,6 @@
             updatedAt: toEpochMs(match.updatedAt)
           }));
         const localArchivedById = new Map((AppState.archivedMatches || []).map((match) => [match.id, match]));
-        const pendingFinalizations = getPendingFinalizationSet();
         archived.forEach((match) => {
           const local = localArchivedById.get(match.id);
           const localUpdatedAt = toEpochMs(local?.updatedAt || local?.endedAt || local?.date);
