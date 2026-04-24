@@ -4459,7 +4459,7 @@ function purgeTemporaryCompetitionSlotsFromRegistry() {
       sdkEvents = sdkEvents.filter((event) => event.matchId !== matchId);
       AppState.events = [...sdkEvents];
       if (deletingActiveMatch) {
-        clearActiveMatchReferenceLocally({ resetOperationalTabs: true });
+        clearActiveMatchReferenceLocally();
       }
 
       if (AppState.auth.user?.uid && firestoreDb) {
